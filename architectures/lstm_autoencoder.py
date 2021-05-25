@@ -10,9 +10,9 @@ class EncoderLSTM(nn.Module):
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        h_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True)
-        c_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True)
+    def forward(self, input: torch.tensor) -> torch.tensor:
+        h_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True, device="cuda:0")
+        c_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True, device="cuda:0")
         output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
         return output
 
@@ -25,9 +25,9 @@ class DecoderLSTM(nn.Module):
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
 
-    def forward(self, enc_x: torch.Tensor) -> torch.Tensor:
-        h_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True)
-        c_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True)
+    def forward(self, enc_x: torch.tensor) -> torch.tensor:
+        h_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device="cuda:0")
+        c_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device="cuda:0")
         dec_x, (h_n, c_n) = self.lstm(enc_x, (h_0, c_0))
         return dec_x
 
@@ -46,7 +46,7 @@ class AutoEncoder(nn.Module):
         self.encoder = EncoderLSTM(input_size, hidden_size, num_layers)
         self.decoder = DecoderLSTM(hidden_size, input_size, num_layers)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.tensor) -> torch.tensor:
         enc_x = self.encoder(x)
         dec_x = self.decoder(enc_x)
         return dec_x

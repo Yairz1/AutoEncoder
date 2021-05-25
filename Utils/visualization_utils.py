@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 class VisualizationUtils:
     @staticmethod
-    def visualize_data_examples(data: torch.Tensor, n: int, title: str, xlabel: str, ylabel: str, path: str):
+    def visualize_data_examples(data: torch.tensor, n: int, title: str, xlabel: str, ylabel: str, path: str):
         """
         :param data: Data to visualize
         :param n: number of subplots
