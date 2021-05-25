@@ -1,4 +1,6 @@
-from typing import Union
+from typing import Union, Optional
+
+import os
 import torch
 from torch.utils.data import random_split
 from torch import device
@@ -6,15 +8,23 @@ from torch import device
 
 class DataUtils:
     @staticmethod
-    def create_synthetic_data(size: int, sample_size: int, device_type: Union[str, device]) -> torch.tensor:
+    def create_synthetic_data(size: int,
+                              sample_size: int,
+                              device_type: Union[str, device],
+                              path: str) -> torch.tensor:
         """
         Create a synthetic dataset or load from the given path
         :param device_type: gpu or cpu (cuda:0 or cpu)
         :param size: number of samples
         :param sample_size: sample size
+        :param path: path to save and load the dataset
         :return: Torch tensor
         """
-        return torch.rand(size=(size, sample_size), device=device_type)
+        if path and os.path.isfile(path):
+            return torch.load(path)
+        data = torch.rand(size=(size, sample_size), device=device_type)
+        torch.save(data, path)
+        return data
 
     @staticmethod
     def train_val_test_split(data: torch.tensor, train_ratio: float, val_ratio: float, test_ratio: float):

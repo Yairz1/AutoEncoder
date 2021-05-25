@@ -1,3 +1,5 @@
+import os
+
 from Utils.data_utils import DataUtils
 from Utils.visualization_utils import VisualizationUtils
 from architectures.lstm_autoencoder import AutoEncoder
@@ -8,10 +10,6 @@ from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 import torch
 from torch.utils.tensorboard import SummaryWriter
-
-from ray import tune
-from ray.tune import CLIReporter
-from ray.tune.schedulers import ASHAScheduler
 
 import argparse
 from typing import Any
@@ -48,10 +46,10 @@ def plot_synthetic_samples():
 
 # plot_synthetic_samples()
 
-def synthetic_init():
+def synthetic_init(path: str):
     data_size = 10000
     series_size = 50
-    dataset = DataUtils.create_synthetic_data(size=data_size, sample_size=series_size, device_type=device)
+    dataset = DataUtils.create_synthetic_data(size=data_size, sample_size=series_size, device_type=device, path=path)
     dataset = dataset.unsqueeze(2)
     train, val, test = DataUtils.train_val_test_split(dataset, 0.6, 0.2, 0.2)
     train_loader = DataLoader(train, batch_size=args.batch_size)
@@ -95,5 +93,11 @@ def synthetic_train(net: nn.Module,
     writer.close()
 
 
-auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = synthetic_init()
-synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
+#
+# auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = synthetic_init(path="./data/synthetic_data")
+# synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
+
+
+if __name__ == "__main__":
+    # You can change the number of GPUs per trial here:
+    main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
