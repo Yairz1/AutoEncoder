@@ -1,6 +1,8 @@
 import os
+from functools import partial
 
 from Utils.data_utils import DataUtils
+from Utils.training_utils import TrainingUtils
 from Utils.visualization_utils import VisualizationUtils
 from Architectures.lstm_autoencoder import AutoEncoder
 
@@ -10,6 +12,10 @@ from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 import torch
 from torch.utils.tensorboard import SummaryWriter
+
+from ray import tune
+from ray.tune import CLIReporter
+from ray.tune.schedulers import ASHAScheduler
 
 import argparse
 from typing import Any
@@ -50,59 +56,110 @@ def plot_synthetic_samples():
 
 # plot_synthetic_samples()
 
-def synthetic_init(path: str):
-    data_size = 10000
-    series_size = 50
-    dataset = DataUtils.create_synthetic_data(size=data_size, sample_size=series_size, device_type=device, path=path)
-    dataset = dataset.unsqueeze(2)
-    train, val, test = DataUtils.train_val_test_split(dataset, 0.6, 0.2, 0.2)
-    train_loader = DataLoader(train, batch_size=args.batch_size)
-    val_loader = DataLoader(val, batch_size=args.batch_size)
-    test_loader = DataLoader(test, batch_size=len(test))
-    auto_encoder = AutoEncoder(input_size=1, hidden_size=args.context_size, num_layers=args.lstm_layers_size)
-    auto_encoder = auto_encoder.to(device)
+def init(hidden_size: int, path: str, checkpoint_dir: str):
+    test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, args.batch_size)
+    auto_encoder = AutoEncoder(input_size=1, hidden_size=hidden_size, num_layers=args.lstm_layers_size)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(auto_encoder.parameters(), lr=0.001, momentum=0.9)
+    if checkpoint_dir:
+        model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
+        auto_encoder.load_state_dict(model_state)
+        auto_encoder = auto_encoder.to(device)
+        optimizer.load_state_dict(optimizer_state)
     return auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer
 
 
-def synthetic_train(net: nn.Module,
-                    epochs: int,
-                    train: Any,
-                    val: Any,
-                    test: Any,
-                    criterion: nn.Module,
-                    optimizer: Optimizer):
-    for epoch in range(epochs):
+def train_synthetic(config, checkpoint_dir=None, data_dir=None):
+    auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(config["hidden_size"],
+                                                                                     data_dir,
+                                                                                     checkpoint_dir)
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    auto_encoder.to(device)
+
+    for epoch in range(args.epochs):  # loop over the dataset multiple times
         running_loss = 0.0
-        for i, inputs in enumerate(train, 0):
+        epoch_steps = 0
+        for i, data in enumerate(train_loader, 0):
+            inputs, labels = data
+            inputs, labels = inputs.to(device), labels.to(device)
             optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = criterion(inputs, outputs)
-            writer.add_scalar("Loss/train", loss, epoch)
+            outputs = auto_encoder(inputs)
+            loss = criterion(outputs, labels)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), args.clip)
+            torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), grad_clip)
             optimizer.step()
 
+            # print statistics
             running_loss += loss.item()
+            epoch_steps += 1
             if i % 2000 == 1999:  # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
+                print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1,
+                                                running_loss / epoch_steps))
                 running_loss = 0.0
-    test_input = next(iter(test))
-    test_output = net(test_input)
-    loss = criterion(test_input, test_output)
-    writer.add_scalar(f"Loss/test ", loss)
-    print('Finished Training')
-    writer.close()
+
+        # Validation loss
+        val_loss = 0.0
+        val_steps = 0
+        total = 0
+        correct = 0
+        for i, data in enumerate(val_loader, 0):
+            with torch.no_grad():
+                inputs, labels = data
+                inputs, labels = inputs.to(device), labels.to(device)
+
+                outputs = auto_encoder(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+                loss = criterion(outputs, labels)
+                val_loss += loss.cpu().numpy()
+                val_steps += 1
+
+        with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            path = os.path.join(checkpoint_dir, "checkpoint")
+            torch.save((auto_encoder.state_dict(), optimizer.state_dict()), path)
+
+        tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
+    print("Finished Training")
 
 
-plot_synthetic_samples()
+# plot_synthetic_samples()
 #
-# auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = synthetic_init(path="./data/synthetic_data")
+# auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(path="./data/synthetic_data")
 # synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
 
+def main(num_samples=10, max_num_epochs=10):
+    data_dir = os.path.abspath("./data")
+    config = {"hidden_size": tune.grid_search([10, 20, 30]),
+              "lr": tune.grid_search([0.001, 0.01, 0.1]),
+              "grad_clip": tune.grid_search([1, 1.5, 2])}
+    scheduler = ASHAScheduler(metric="loss", mode="min", max_t=max_num_epochs, grace_period=1, reduction_factor=2)
+    reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
+    result = tune.run(partial(train_synthetic, data_dir=data_dir),
+                      resources_per_trial={"cpu": 1, "gpu": 1},
+                      config=config,
+                      num_samples=num_samples,
+                      scheduler=scheduler,
+                      progress_reporter=reporter)
 
-# if __name__ == "__main__":
-#     # You can change the number of GPUs per trial here:
-#     main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
+    best_trial = result.get_best_trial("loss", "min", "last")
+    print("Best trial config: {}".format(best_trial.config))
+    print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
+    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
+
+    best_trained_model = AutoEncoder(input_size=3,
+                                     hidden_size=best_trial.config["hidden_size"],
+                                     num_layers=args.lstm_layers_size)
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    best_trained_model.to(device)
+    best_checkpoint_dir = best_trial.checkpoint.value
+    model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
+    best_trained_model.load_state_dict(model_state)
+    test_acc = TrainingUtils.test_accuracy(best_trained_model, device)
+    print("Best trial test set accuracy: {}".format(test_acc))
+
+
+if __name__ == "__main__":
+    # You can change the number of GPUs per trial here:
+    main(num_samples=10, max_num_epochs=10)

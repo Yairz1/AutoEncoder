@@ -31,40 +31,34 @@ class TrainingUtils:
 
         return correct / total
 
-    @staticmethod
-    def hyper_param_search_train(net_init, train_method, num_samples=10, max_num_epochs=10, gpus_per_trial=2):
-        data_dir = os.path.join("data", "synthetic_data")
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-        data = DataUtils.create_synthetic_data(size=10000, sample_size=50, device_type=device, path=data_dir)
-        config = {
-            "hidden_size": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-            "lr": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-            "grad_clip": tune.loguniform(1e-4, 1e-1),
-        }
-        scheduler = ASHAScheduler(metric="loss", mode="min", max_t=max_num_epochs, grace_period=1, reduction_factor=2)
-        # parameter_columns=["l1", "l2", "lr", "batch_size"],
-        reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
 
-        result = tune.run(partial(train_method, data_dir=data_dir),
-                          resources_per_trial={"cpu": 2, "gpu": gpus_per_trial},
-                          config=config,
-                          num_samples=num_samples,
-                          scheduler=scheduler,
-                          progress_reporter=reporter)
-
-        best_trial = result.get_best_trial("loss", "min", "last")
-        print("Best trial config: {}".format(best_trial.config))
-        print("Best trial final validation loss: {}".format(
-            best_trial.last_result["loss"]))
-        print("Best trial final validation accuracy: {}".format(
-            best_trial.last_result["accuracy"]))
-        best_trained_model = net_init(input_size=1, hidden_size=best_trial.config["hidden_size"], num_layers=2)
-        best_trained_model.to(device)
-
-        best_checkpoint_dir = best_trial.checkpoint.value
-        model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
-        best_trained_model.load_state_dict(model_state)
-
-        test_acc = TrainingUtils.test_accuracy(best_trained_model, device)
-        print("Best trial test set accuracy: {}".format(test_acc))
+# def synthetic_train(net: nn.Module,
+#                     epochs: int,
+#                     train: Any,
+#                     val: Any,
+#                     test: Any,
+#                     criterion: nn.Module,
+#                     optimizer: Optimizer):
+#     for epoch in range(epochs):
+#         running_loss = 0.0
+#         for i, inputs in enumerate(train, 0):
+#             optimizer.zero_grad()
+#             outputs = net(inputs)
+#             loss = criterion(inputs, outputs)
+#             writer.add_scalar("Loss/train", loss, epoch)
+#             loss.backward()
+#             torch.nn.utils.clip_grad_norm_(net.parameters(), args.clip)
+#             optimizer.step()
+#
+#             running_loss += loss.item()
+#             if i % 2000 == 1999:  # print every 2000 mini-batches
+#                 print('[%d, %5d] loss: %.3f' %
+#                       (epoch + 1, i + 1, running_loss / 2000))
+#                 running_loss = 0.0
+#     test_input = next(iter(test))
+#     test_output = net(test_input)
+#     loss = criterion(test_input, test_output)
+#     writer.add_scalar(f"Loss/test ", loss)
+#     print('Finished Training')
+#     writer.close()

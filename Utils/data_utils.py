@@ -1,8 +1,8 @@
-from typing import Union, Optional
+from typing import Union, Optional, Type
 
 import os
 import torch
-from torch.utils.data import random_split
+from torch.utils.data import random_split, DataLoader
 from torch import device
 
 
@@ -10,7 +10,7 @@ class DataUtils:
     @staticmethod
     def create_synthetic_data(size: int,
                               sample_size: int,
-                              device_type: Union[str, device],
+                              device_type: Union[str, Type[device]],
                               path: str,
                               load: bool = True) -> torch.tensor:
         """
@@ -48,6 +48,18 @@ class DataUtils:
         val_size = int(data_size * val_ratio)
         test_size = int(data_size * test_ratio)
         return random_split(dataset=data, lengths=(train_size, val_size, test_size))
+
+    @staticmethod
+    def load_synthetic_data(path, batch_size):
+        data_size = 10000
+        series_size = 50
+        dataset = DataUtils.create_synthetic_data(data_size, series_size, device, path)
+        dataset = dataset.unsqueeze(2)
+        train, val, test = DataUtils.train_val_test_split(dataset, 0.6, 0.2, 0.2)
+        train_loader = DataLoader(train, batch_size=batch_size)
+        val_loader = DataLoader(val, batch_size=batch_size)
+        test_loader = DataLoader(test, batch_size=len(test))
+        return test_loader, train_loader, val_loader
 
 
 DataUtils.create_synthetic_data(10000, 50, "cpu", "")
