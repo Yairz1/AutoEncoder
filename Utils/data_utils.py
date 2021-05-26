@@ -11,20 +11,24 @@ class DataUtils:
     def create_synthetic_data(size: int,
                               sample_size: int,
                               device_type: Union[str, device],
-                              path: str) -> torch.tensor:
+                              path: str,
+                              load: bool = True) -> torch.tensor:
         """
         Create a synthetic dataset or load from the given path
         :param device_type: gpu or cpu (cuda:0 or cpu)
         :param size: number of samples
         :param sample_size: sample size
         :param path: path to save and load the dataset
+        :param load: Either to load or create new data
         :return: Torch tensor
         """
-        if path and os.path.isfile(path):
+        if load and path and os.path.isfile(path):
             return torch.load(path)
-        data = torch.rand(size=(size, sample_size), device=device_type)
-        torch.save(data, path)
-        return data
+        data = torch.FloatTensor(size, sample_size).uniform_(0, 0.5)
+        data = data - data.mean(1)[:, None] + 0.5
+        if path:
+            torch.save(data, path)
+        return data.to(device_type)
 
     @staticmethod
     def train_val_test_split(data: torch.tensor, train_ratio: float, val_ratio: float, test_ratio: float):
@@ -44,3 +48,6 @@ class DataUtils:
         val_size = int(data_size * val_ratio)
         test_size = int(data_size * test_ratio)
         return random_split(dataset=data, lengths=(train_size, val_size, test_size))
+
+
+DataUtils.create_synthetic_data(10000, 50, "cpu", "")

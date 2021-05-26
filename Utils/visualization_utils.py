@@ -16,10 +16,14 @@ class VisualizationUtils:
         """
         fig, axs = plt.subplots(n)
         for i, ax in enumerate(axs):
-            ax.plot(data[i, :])
+            ax.plot(data[i, :], label="Data")
             ax.set_title(f"Sample {i}")
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
+            ax.axhline(0.5, color='red', ls='--', label='Mean')
+
+        handles, labels = axs[-1].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper left')
         fig.tight_layout(pad=3.0)
         fig.suptitle(title)
         if path:

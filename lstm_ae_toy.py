@@ -2,7 +2,7 @@ import os
 
 from Utils.data_utils import DataUtils
 from Utils.visualization_utils import VisualizationUtils
-from architectures.lstm_autoencoder import AutoEncoder
+from Architectures.lstm_autoencoder import AutoEncoder
 
 import torch.optim as optim
 import torch.nn as nn
@@ -35,7 +35,11 @@ device = torch.device("cuda" if args.cuda else "cpu")
 
 
 def plot_synthetic_samples():
-    synthetic_data = DataUtils.create_synthetic_data(size=10000, sample_size=50, device_type="cuda:0").cpu()
+    synthetic_data = DataUtils.create_synthetic_data(size=10000,
+                                                     sample_size=50,
+                                                     device_type="cpu",
+                                                     path="./data/synthetic_data",
+                                                     load=False)
     VisualizationUtils.visualize_data_examples(synthetic_data,
                                                n=3,
                                                title='Synthetic samples',
@@ -93,11 +97,12 @@ def synthetic_train(net: nn.Module,
     writer.close()
 
 
+plot_synthetic_samples()
 #
 # auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = synthetic_init(path="./data/synthetic_data")
 # synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
 
 
-if __name__ == "__main__":
-    # You can change the number of GPUs per trial here:
-    main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
+# if __name__ == "__main__":
+#     # You can change the number of GPUs per trial here:
+#     main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
