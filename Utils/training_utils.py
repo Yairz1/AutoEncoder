@@ -7,6 +7,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 
 from Utils.data_utils import DataUtils
@@ -16,14 +17,15 @@ from Utils.data_utils import DataUtils
 
 class TrainingUtils:
     @staticmethod
-    def test_accuracy(net, criterion, test_loader, device="cpu"):
+    def test_accuracy(net, test_loader, device="cpu"):
+        criterion = nn.MSELoss()
         with torch.no_grad():
             test_input = next(iter(test_loader))
             test_input = test_input.to(device)
             test_output = net(test_input)
-            loss = criterion(test_input, test_output)
-            print(f"Test loss = {loss}")
-
+        loss = criterion(test_input, test_output)
+        print(f"Test MSE loss = {loss}")
+        return loss
 # def synthetic_train(net: nn.Module,
 #                     epochs: int,
 #                     train: Any,
