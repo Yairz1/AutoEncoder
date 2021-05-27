@@ -30,6 +30,7 @@ class DecoderLSTM(nn.Module):
         self.device = device
 
     def forward(self, enc_x: torch.tensor) -> torch.tensor:
+        # todo to talk about the input that should be the same dec_x for each of the lstm cells
         h_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device=self.device)
         c_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device=self.device)
         dec_x, (h_n, c_n) = self.lstm(enc_x, (h_0, c_0))

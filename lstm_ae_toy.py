@@ -108,7 +108,9 @@ def train_synthetic(config, device, checkpoint_dir=None, data_dir=None):
     return auto_encoder, (training_info, val_info)
 
 
-# plot_synthetic_samples()
+plot_synthetic_samples()
+
+
 #
 # auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(path="./data/synthetic_data")
 # synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
@@ -126,9 +128,8 @@ def main():
              test_func=partial(TrainingUtils.test_accuracy, test_loader=test_loader, device=device))
 
     print("Best trial config: {}".format(tune.best_config))
-    print("Best trial final validation loss: {}".format(tune.best_config))
+    print("Best trial final validation loss: {}".format(tune.best_config))  # todo val loss
     print("Best trial test set accuracy: {}".format(tune.best_loss))
 
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
