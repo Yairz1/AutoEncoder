@@ -8,8 +8,6 @@ from Architectures.lstm_autoencoder import AutoEncoder
 
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import Optimizer
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -56,9 +54,9 @@ def plot_synthetic_samples():
 
 # plot_synthetic_samples()
 
-def init(hidden_size: int, path: str, checkpoint_dir: str):
+def init(hidden_size: int, path: str, checkpoint_dir: str, device: Any):
     test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, args.batch_size)
-    auto_encoder = AutoEncoder(input_size=1, hidden_size=hidden_size, num_layers=args.lstm_layers_size)
+    auto_encoder = AutoEncoder(input_size=1, hidden_size=hidden_size, num_layers=args.lstm_layers_size, device=device)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(auto_encoder.parameters(), lr=0.001, momentum=0.9)
     if checkpoint_dir:
@@ -69,24 +67,22 @@ def init(hidden_size: int, path: str, checkpoint_dir: str):
     return auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer
 
 
-def train_synthetic(config, checkpoint_dir=None, data_dir=None):
+def train_synthetic(config, device, checkpoint_dir=None, data_dir=None):
     auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(config["hidden_size"],
                                                                                      data_dir,
-                                                                                     checkpoint_dir)
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+                                                                                     checkpoint_dir,
+                                                                                     device)
     auto_encoder.to(device)
-
     for epoch in range(args.epochs):  # loop over the dataset multiple times
         running_loss = 0.0
         epoch_steps = 0
         for i, data in enumerate(train_loader, 0):
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            data = data.to(device)
             optimizer.zero_grad()
-            outputs = auto_encoder(inputs)
-            loss = criterion(outputs, labels)
+            outputs = auto_encoder(data)
+            loss = criterion(outputs, data)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), grad_clip)
+            torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
             optimizer.step()
 
             # print statistics
@@ -100,19 +96,11 @@ def train_synthetic(config, checkpoint_dir=None, data_dir=None):
         # Validation loss
         val_loss = 0.0
         val_steps = 0
-        total = 0
-        correct = 0
         for i, data in enumerate(val_loader, 0):
             with torch.no_grad():
-                inputs, labels = data
-                inputs, labels = inputs.to(device), labels.to(device)
-
-                outputs = auto_encoder(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-                loss = criterion(outputs, labels)
+                data = data.to(device)
+                outputs = auto_encoder(data)
+                loss = criterion(outputs, data)
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
 
@@ -120,7 +108,7 @@ def train_synthetic(config, checkpoint_dir=None, data_dir=None):
             path = os.path.join(checkpoint_dir, "checkpoint")
             torch.save((auto_encoder.state_dict(), optimizer.state_dict()), path)
 
-        tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
+        tune.report(loss=(val_loss / val_steps))
     print("Finished Training")
 
 
@@ -129,34 +117,45 @@ def train_synthetic(config, checkpoint_dir=None, data_dir=None):
 # auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(path="./data/synthetic_data")
 # synthetic_train(auto_encoder, args.epochs, train_loader, val_loader, test_loader, criterion, optimizer)
 
-def main(num_samples=10, max_num_epochs=10):
-    data_dir = os.path.abspath("./data")
-    config = {"hidden_size": tune.grid_search([10, 20, 30]),
-              "lr": tune.grid_search([0.001, 0.01, 0.1]),
-              "grad_clip": tune.grid_search([1, 1.5, 2])}
+def main(num_samples=1, max_num_epochs=1):
+    data_dir = os.path.join("data", "synthetic_data")
+    # checkpoint_dir = None
+    # config = {"hidden_size": tune.grid_search([10, 20, 30]),
+    #           "lr": tune.grid_search([0.001, 0.01, 0.1]),
+    #           "grad_clip": tune.grid_search([1, 1.5, 2])}
+    config = {"hidden_size": tune.grid_search([10]),
+              "lr": tune.grid_search([0.001]),
+              "grad_clip": tune.grid_search([1, 1.5])}
     scheduler = ASHAScheduler(metric="loss", mode="min", max_t=max_num_epochs, grace_period=1, reduction_factor=2)
     reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
-    result = tune.run(partial(train_synthetic, data_dir=data_dir),
+    # device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    device = "cpu"
+
+    result = tune.run(partial(train_synthetic, device=device, data_dir=data_dir),
                       resources_per_trial={"cpu": 1, "gpu": 1},
                       config=config,
                       num_samples=num_samples,
                       scheduler=scheduler,
-                      progress_reporter=reporter)
+                      progress_reporter=reporter,
+                      name="AE grid search")
 
     best_trial = result.get_best_trial("loss", "min", "last")
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 
-    best_trained_model = AutoEncoder(input_size=3,
+    best_trained_model = AutoEncoder(input_size=1,
                                      hidden_size=best_trial.config["hidden_size"],
-                                     num_layers=args.lstm_layers_size)
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+                                     num_layers=args.lstm_layers_size,
+                                     device=device)
     best_trained_model.to(device)
     best_checkpoint_dir = best_trial.checkpoint.value
     model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
     best_trained_model.load_state_dict(model_state)
-    test_acc = TrainingUtils.test_accuracy(best_trained_model, device)
+    test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size)
+    test_acc = TrainingUtils.test_accuracy(net=best_trained_model,
+                                           criterion=None,
+                                           test_loader=test_loader,
+                                           device=device)
     print("Best trial test set accuracy: {}".format(test_acc))
 
 

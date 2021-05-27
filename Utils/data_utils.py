@@ -1,4 +1,4 @@
-from typing import Union, Optional, Type
+from typing import Union, Optional, Type, Any
 
 import os
 import torch
@@ -10,7 +10,7 @@ class DataUtils:
     @staticmethod
     def create_synthetic_data(size: int,
                               sample_size: int,
-                              device_type: Union[str, Type[device]],
+                              device_type: Any,
                               path: str,
                               load: bool = True) -> torch.tensor:
         """
@@ -26,9 +26,10 @@ class DataUtils:
             return torch.load(path)
         data = torch.FloatTensor(size, sample_size).uniform_(0, 0.5)
         data = data - data.mean(1)[:, None] + 0.5
-        if path:
-            torch.save(data, path)
-        return data.to(device_type)
+        # if path:
+        #     dir_path = os.path.dirname(path)
+        #     torch.save(data, dir_path)
+        return data
 
     @staticmethod
     def train_val_test_split(data: torch.tensor, train_ratio: float, val_ratio: float, test_ratio: float):

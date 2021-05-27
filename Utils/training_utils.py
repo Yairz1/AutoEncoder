@@ -16,22 +16,13 @@ from Utils.data_utils import DataUtils
 
 class TrainingUtils:
     @staticmethod
-    def test_accuracy(net, test_data, device="cpu"):
-        testloader = DataLoader(test_data, batch_size=4, shuffle=False)
-        correct = 0
-        total = 0
+    def test_accuracy(net, criterion, test_loader, device="cpu"):
         with torch.no_grad():
-            for data in testloader:
-                images, labels = data
-                images, labels = images.to(device), labels.to(device)
-                outputs = net(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-        return correct / total
-
-
+            test_input = next(iter(test_loader))
+            test_input = test_input.to(device)
+            test_output = net(test_input)
+            loss = criterion(test_input, test_output)
+            print(f"Test loss = {loss}")
 
 # def synthetic_train(net: nn.Module,
 #                     epochs: int,
