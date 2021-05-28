@@ -5,15 +5,11 @@ from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
 from Utils.visualization_utils import VisualizationUtils
-from Architectures.lstm_autoencoder import AutoEncoder
 
-import torch.optim as optim
-import torch.nn as nn
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
 import argparse
-from typing import Any
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
@@ -48,66 +44,6 @@ def plot_synthetic_samples():
                                                path="./plots/synthetic_samples")
 
 
-# plot_synthetic_samples()
-
-def init(hidden_size: int, path: str, checkpoint_dir: str, device: Any):
-    test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, args.batch_size)
-    auto_encoder = AutoEncoder(input_size=1, hidden_size=hidden_size, num_layers=args.lstm_layers_size, device=device)
-    criterion = nn.MSELoss()
-    optimizer = optim.SGD(auto_encoder.parameters(), lr=0.001, momentum=0.9)
-    if checkpoint_dir:
-        model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
-        auto_encoder.load_state_dict(model_state)
-        auto_encoder = auto_encoder.to(device)
-        optimizer.load_state_dict(optimizer_state)
-    return auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer
-
-
-def train_synthetic(config, device, checkpoint_dir=None, data_dir=None):
-    auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = init(config["hidden_size"],
-                                                                                     data_dir,
-                                                                                     checkpoint_dir,
-                                                                                     device)
-    auto_encoder.to(device)
-    training_info = []
-    val_info = []
-    for epoch in range(args.epochs):  # loop over the dataset multiple times
-        running_loss = 0.0
-        epoch_steps = 0
-        for i, data in enumerate(train_loader, 0):
-            data = data.to(device)
-            optimizer.zero_grad()
-            outputs = auto_encoder(data)
-            loss = criterion(outputs, data)
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
-            optimizer.step()
-
-            # print statistics
-            running_loss += loss.item()
-            epoch_steps += 1
-            if i % 2000 == 1999:  # print every 2000 mini-batches
-                print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1,
-                                                running_loss / epoch_steps))
-                running_loss = 0.0
-        training_info.append(loss.item())
-
-        # Validation loss
-        val_loss = 0.0
-        val_steps = 0
-        for i, data in enumerate(val_loader, 0):
-            with torch.no_grad():
-                data = data.to(device)
-                outputs = auto_encoder(data)
-                loss = criterion(outputs, data)
-                val_loss += loss.cpu().numpy()
-                val_steps += 1
-
-        val_info.append(val_loss / val_steps)
-    print("Finished Training")
-    return auto_encoder, training_info, val_info
-
-
 def main():
     # plot_synthetic_samples()
 
@@ -122,7 +58,11 @@ def main():
     test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size)
 
     tune = ParameterTuning(config_options=config)
-    tune.run(train_func=partial(train_synthetic, device=device, data_dir=data_dir),
+    tune.run(train_func=partial(TrainingUtils.train_synthetic, batch_size=args.batch_size,
+                                lstm_layers_size=args.lstm_layers_size,
+                                epochs=args.epochs,
+                                device=device,
+                                data_dir=data_dir),
              test_func=partial(TrainingUtils.test_accuracy, test_loader=test_loader, device=device))
 
     print("Best trial config: {}".format(tune.best_config))
