@@ -37,7 +37,7 @@ class DecoderLSTM(nn.Module):
         z = z.unsqueeze(1)
         z = z.repeat(1, self.input_seq_size, 1)
         output, (h_n, c_n) = self.lstm(z, (h_0, c_0))
-        return torch.sigmoid(output)
+        return torch.relu(output)
 
 
 class AutoEncoder(nn.Module):
@@ -56,12 +56,14 @@ class AutoEncoder(nn.Module):
                                    num_layers=num_layers,
                                    device=device)
         self.decoder = DecoderLSTM(input_size=hidden_size,
-                                   hidden_size=input_size,
+                                   hidden_size=hidden_size,
                                    num_layers=num_layers,
                                    input_seq_size=input_seq_size,
                                    device=device)
+        self.fc = nn.Linear(hidden_size, input_size)
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)
         x_gal = self.decoder(z)
+        x_gal = F.relu(self.fc(x_gal))
         return x_gal
