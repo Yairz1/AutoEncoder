@@ -37,7 +37,7 @@ class TrainingUtils:
         return auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer
 
     @staticmethod
-    def train_synthetic(batch_size, lstm_layers_size, epochs, config, device, checkpoint_dir=None, data_dir=None):
+    def train_synthetic(config, batch_size, lstm_layers_size, epochs, device, checkpoint_dir=None, data_dir=None):
         auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = TrainingUtils.init(
             batch_size,
             lstm_layers_size,

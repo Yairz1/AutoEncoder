@@ -13,7 +13,7 @@ import argparse
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
-parser.add_argument('--batch-size', type=int, default=32, metavar='N',
+parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -58,7 +58,8 @@ def main():
     test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size)
 
     tune = ParameterTuning(config_options=config)
-    tune.run(train_func=partial(TrainingUtils.train_synthetic, batch_size=args.batch_size,
+    tune.run(train_func=partial(TrainingUtils.train_synthetic,
+                                batch_size=args.batch_size,
                                 lstm_layers_size=args.lstm_layers_size,
                                 epochs=args.epochs,
                                 device=device,
