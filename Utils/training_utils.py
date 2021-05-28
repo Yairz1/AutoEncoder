@@ -23,7 +23,7 @@ class TrainingUtils:
             test_input = next(iter(test_loader))
             test_input = test_input.to(device)
             test_output = net(test_input)
-        loss = criterion(test_input, test_output)
+        loss = criterion(test_input, test_output).item()
         print(f"Test MSE loss = {loss}")
         return loss
 # def synthetic_train(net: nn.Module,
