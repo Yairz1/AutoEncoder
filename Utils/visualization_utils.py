@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 from matplotlib import pyplot as plt
 
@@ -29,3 +31,21 @@ class VisualizationUtils:
         if path:
             plt.savefig(path)
         plt.show()
+
+    @staticmethod
+    def plot_dict(path: str, config2info: Dict, title: str):
+        fig, axs = plt.subplots(len(config2info))
+        for ax, (config_str, config_info) in zip(axs, config2info.items()):
+            VisualizationUtils.single_plot(ax, config_info, config_str)
+        fig.tight_layout(pad=3.0)
+        fig.suptitle(title)
+        if path:
+            plt.savefig(path)
+        plt.show()
+
+    @staticmethod
+    def single_plot(ax, config_info, config_str):
+        ax.plot(config_info, label="Data")
+        ax.set_title(f"Configuration {config_str}")
+        ax.set_xlabel("Epochs")
+        ax.set_ylabel("Loss")

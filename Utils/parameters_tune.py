@@ -3,6 +3,8 @@ from itertools import product
 from matplotlib import pyplot as plt
 from torch import nn
 
+from Utils.visualization_utils import VisualizationUtils
+
 """
 Use example:
 import train
@@ -72,19 +74,19 @@ class ParameterTuning:
     def plot_validation_trails(self, path: str):
         if not self.config2val_info:
             raise Exception("Execute run method first")
-        ParameterTuning._plot_dict(path, self.config2val_info, "Configuration and validation information")
+        VisualizationUtils.plot_dict(path, self.config2val_info, "Configuration and validation information")
 
     def plot_train_trails(self, path: str):
         if not self.config2train_info:
             raise Exception("Execute run method first")
-        ParameterTuning._plot_dict(path, self.config2train_info, "Configuration and training information")
+        VisualizationUtils.plot_dict(path, self.config2train_info, "Configuration and training information")
 
     def plot_best_train(self, path):
         if not self.config2train_info:
             raise Exception("Execute run method first")
         config_key = str(self.best_config)
         fig, ax = plt.subplots()
-        ParameterTuning._single_plot(ax, self.config2train_info[config_key], config_key)
+        VisualizationUtils.single_plot(ax, self.config2train_info[config_key], config_key)
         fig.suptitle("Best training info")
         fig.show()
         if path:
@@ -93,26 +95,10 @@ class ParameterTuning:
     def plot_best_val(self, path):
         config_key = str(self.best_config)
         fig, ax = plt.subplots()
-        ParameterTuning._single_plot(ax, self.config2val_info[config_key], config_key)
+        VisualizationUtils.single_plot(ax, self.config2val_info[config_key], config_key)
         fig.suptitle("Best validation info")
         fig.show()
         if path:
             ax.save(path)
 
-    @staticmethod
-    def _plot_dict(path: str, config2info: Dict, title: str):
-        fig, axs = plt.subplots(len(config2info))
-        for ax, (config_str, config_info) in zip(axs, config2info.items()):
-            ParameterTuning._single_plot(ax, config_info, config_str)
-        fig.tight_layout(pad=3.0)
-        fig.suptitle(title)
-        if path:
-            plt.savefig(path)
-        plt.show()
 
-    @staticmethod
-    def _single_plot(ax, config_info, config_str):
-        ax.plot(config_info, label="Data")
-        ax.set_title(f"Configuration {config_str}")
-        ax.set_xlabel("Epochs")
-        ax.set_ylabel("Loss")
