@@ -86,7 +86,7 @@ class ParameterTuning:
         fig, ax = plt.subplots()
         ParameterTuning._single_plot(ax, self.config2train_info[config_key], config_key)
         fig.suptitle("Best training info")
-        fig.plot()
+        fig.show()
         if path:
             ax.save(path)
 
@@ -95,7 +95,7 @@ class ParameterTuning:
         fig, ax = plt.subplots()
         ParameterTuning._single_plot(ax, self.config2val_info[config_key], config_key)
         fig.suptitle("Best validation info")
-        fig.plot()
+        fig.show()
         if path:
             ax.save(path)
 
