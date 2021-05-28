@@ -1,6 +1,7 @@
 from typing import Any
 
 from torch import nn
+import torch.nn.functional as F
 import torch
 
 
@@ -17,28 +18,30 @@ class EncoderLSTM(nn.Module):
         h_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True, device=self.device)
         c_0 = torch.randn(self.num_layers, input.shape[0], self.hidden_size, requires_grad=True, device=self.device)
         output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
-        return output
+        return F.relu(h_n[-1])  # hidden state from the last layer.
 
 
 class DecoderLSTM(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int, num_layers: int, device: Any):
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int, input_seq_size: int, device: Any):
         super(DecoderLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.device = device
+        self.input_seq_size = input_seq_size
 
-    def forward(self, enc_x: torch.tensor) -> torch.tensor:
-        # todo to talk about the input that should be the same dec_x for each of the lstm cells
-        h_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device=self.device)
-        c_0 = torch.randn(self.num_layers, enc_x.shape[0], self.hidden_size, requires_grad=True, device=self.device)
-        dec_x, (h_n, c_n) = self.lstm(enc_x, (h_0, c_0))
-        return dec_x
+    def forward(self, z: torch.tensor) -> torch.tensor:
+        h_0 = torch.randn(self.num_layers, z.shape[0], self.hidden_size, requires_grad=True, device=self.device)
+        c_0 = torch.randn(self.num_layers, z.shape[0], self.hidden_size, requires_grad=True, device=self.device)
+        z = z.unsqueeze(1)
+        z = z.repeat(1, self.input_seq_size, 1)
+        output, (h_n, c_n) = self.lstm(z, (h_0, c_0))
+        return torch.sigmoid(output)
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int, num_layers: int, device: Any):
+    def __init__(self, input_size: int, input_seq_size: int, hidden_size: int, num_layers: int, device: Any):
         """
         :param input_size: Encoder input size and decoder output size
         :param hidden_size: Encoder hidden size and decoder input size
@@ -48,10 +51,17 @@ class AutoEncoder(nn.Module):
         # the output of the encoder is h_t and that's why we init the decoder with input_size = hidden_size
         # the output of the decoder should be in the same size of the origin input and that's why the
         # hidden size = input_size
-        self.encoder = EncoderLSTM(input_size, hidden_size, num_layers, device)
-        self.decoder = DecoderLSTM(hidden_size, input_size, num_layers, device)
+        self.encoder = EncoderLSTM(input_size=input_size,
+                                   hidden_size=hidden_size,
+                                   num_layers=num_layers,
+                                   device=device)
+        self.decoder = DecoderLSTM(input_size=hidden_size,
+                                   hidden_size=input_size,
+                                   num_layers=num_layers,
+                                   input_seq_size=input_seq_size,
+                                   device=device)
 
     def forward(self, x: torch.tensor) -> torch.tensor:
-        enc_x = self.encoder(x)
-        dec_x = self.decoder(enc_x)
-        return dec_x
+        z = self.encoder(x)
+        x_gal = self.decoder(z)
+        return x_gal

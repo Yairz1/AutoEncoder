@@ -37,7 +37,7 @@ class VisualizationUtils:
         fig, axs = plt.subplots(len(config2info))
         for ax, (config_str, config_info) in zip(axs, config2info.items()):
             VisualizationUtils.single_plot(ax, config_info, config_str)
-        fig.tight_layout(pad=3.0)
+        fig.tight_layout(pad=5.0)
         fig.suptitle(title)
         if path:
             plt.savefig(path)
@@ -49,3 +49,15 @@ class VisualizationUtils:
         ax.set_title(f"Configuration {config_str}")
         ax.set_xlabel("Epochs")
         ax.set_ylabel("Loss")
+
+    @staticmethod
+    def plot_context(context: torch.tensor, test_input: torch.tensor, n: int):
+        """
+
+        :param context:
+        :param test_input:
+        :param n:
+        :return:
+        """
+        VisualizationUtils.visualize_data_examples(context, 3, "Reconstructed vector", "Time", "Value", "")
+        VisualizationUtils.visualize_data_examples(test_input, 3, "Original vector", "Time", "Value", "")

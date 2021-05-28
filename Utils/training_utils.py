@@ -7,13 +7,10 @@ from torch import nn, optim
 from Architectures.lstm_autoencoder import AutoEncoder
 from Utils.data_utils import DataUtils
 
-"""Based on https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html"""
-
 
 class TrainingUtils:
     @staticmethod
-    def test_accuracy(net, test_loader, device="cpu"):
-        criterion = nn.MSELoss()
+    def test_accuracy(net, criterion, test_loader, device="cpu"):
         with torch.no_grad():
             test_input = next(iter(test_loader))
             test_input = test_input.to(device)
@@ -25,20 +22,23 @@ class TrainingUtils:
     @staticmethod
     def init(batch_size, lstm_layers_size, hidden_size: int, path: str, checkpoint_dir: str, device: Any):
         test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, batch_size)
-        auto_encoder = AutoEncoder(input_size=1, hidden_size=hidden_size, num_layers=lstm_layers_size,
+
+        auto_encoder = AutoEncoder(input_size=1,
+                                   input_seq_size=50,
+                                   hidden_size=hidden_size,
+                                   num_layers=lstm_layers_size,
                                    device=device)
-        criterion = nn.MSELoss()
         optimizer = optim.SGD(auto_encoder.parameters(), lr=0.001, momentum=0.9)
         if checkpoint_dir:
             model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
             auto_encoder.load_state_dict(model_state)
             auto_encoder = auto_encoder.to(device)
             optimizer.load_state_dict(optimizer_state)
-        return auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer
+        return auto_encoder, train_loader, val_loader, test_loader,  optimizer
 
     @staticmethod
-    def train_synthetic(config, batch_size, lstm_layers_size, epochs, device, checkpoint_dir=None, data_dir=None):
-        auto_encoder, train_loader, val_loader, test_loader, criterion, optimizer = TrainingUtils.init(
+    def train_synthetic(config, batch_size, criterion, lstm_layers_size, epochs, device, checkpoint_dir=None, data_dir=None):
+        auto_encoder, train_loader, val_loader, test_loader,  optimizer = TrainingUtils.init(
             batch_size,
             lstm_layers_size,
             config["hidden_size"],

@@ -1,8 +1,9 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from itertools import product
 from matplotlib import pyplot as plt
 from torch import nn
 
+from Architectures.lstm_autoencoder import AutoEncoder
 from Utils.visualization_utils import VisualizationUtils
 
 """
@@ -34,7 +35,7 @@ class ParameterTuning:
         self._param_space: ParamSpace = ParamSpace(config_options)
         self._best_config: Dict = dict()
         self._best_loss: float = float("inf")
-        self._best_model: nn.Module = nn.Module()
+        self._best_model: Union[AutoEncoder, None] = None
         self.config2train_info: Dict[str, List] = dict()
         self.config2val_info: Dict[str, List] = dict()
 
@@ -100,5 +101,3 @@ class ParameterTuning:
         fig.show()
         if path:
             ax.save(path)
-
-
