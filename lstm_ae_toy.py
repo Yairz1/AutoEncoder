@@ -129,6 +129,9 @@ def main():
     print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
     tune.plot_validation_trails(path="")
+    tune.plot_train_trails(path="")
+    tune.plot_best_train(path="")
+    tune.plot_best_val(path="")
 
 
 if __name__ == "__main__":
