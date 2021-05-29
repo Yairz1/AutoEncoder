@@ -20,17 +20,6 @@ class DataUtils:
         else:
             raise Exception("Dataset not supported")
 
-    class Normalization:
-        def __init__(self, average: float):
-            self.average = average
-
-        def __call__(self, sample):
-            _min = sample.min()
-            _max = sample.max()
-            sample = (sample - _min) / (2 * (_max - _min))
-            sample = sample - sample.mean() + 0.5
-            return sample
-
     class ReshapeTransform:
         def __init__(self, shape):
             self.shape = shape
