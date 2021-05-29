@@ -17,11 +17,11 @@ from Utils.visualization_utils import VisualizationUtils
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=1, metavar='N',
+parser.add_argument('--epochs', type=int, default=5, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
-parser.add_argument('--lstm-dropout', type=int, default=0.2, metavar='N',
+parser.add_argument('--lstm-dropout', type=int, default=0.3, metavar='N',
                     help='lstm layers number, default 0')
 parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
@@ -61,9 +61,9 @@ def main():
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots", "mnist")
     data_dir = os.path.join("data")
-    config = {"hidden_size": [128],
+    config = {"hidden_size": [128, 256],
               "lr": [0.001],
-              "grad_clip": [1]}
+              "grad_clip": [None]}
     test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
     plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
     criterion = nn.MSELoss()

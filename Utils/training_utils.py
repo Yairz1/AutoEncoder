@@ -22,7 +22,7 @@ class TrainingUtils:
                 loss += criterion(data, data_output).item()
                 steps += 1
         print(f"Test loss = {loss / steps}")
-        return loss
+        return loss / steps
 
     @staticmethod
     def init(input_size,
