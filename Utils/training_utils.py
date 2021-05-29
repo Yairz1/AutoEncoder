@@ -3,7 +3,7 @@ from typing import Any
 
 import torch
 from torch import optim
-
+from tqdm import tqdm
 from Architectures.lstm_autoencoder import AutoEncoder
 from Utils.data_utils import DataUtils
 
@@ -74,7 +74,7 @@ class TrainingUtils:
 
         training_info = []
         val_info = []
-        for epoch in range(epochs):  # loop over the dataset multiple times
+        for epoch in tqdm(range(epochs)):  # loop over the dataset multiple times
             running_loss = 0.0
             epoch_steps = 0
             for i, data in enumerate(train_loader, 0):
