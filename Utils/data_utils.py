@@ -57,9 +57,9 @@ class DataUtils:
         dataset = DataUtils.create_synthetic_data(data_size, series_size, device, path)
         dataset = dataset.unsqueeze(2)
         train, val, test = DataUtils.train_val_test_split(dataset, 0.6, 0.2, 0.2)
-        train_loader = DataLoader(train, batch_size=batch_size)
-        val_loader = DataLoader(val, batch_size=batch_size)
-        test_loader = DataLoader(test, batch_size=len(test))
+        train_loader = DataLoader(train, batch_size=batch_size, drop_last=True)
+        val_loader = DataLoader(val, batch_size=batch_size, drop_last=True)
+        test_loader = DataLoader(test, batch_size=batch_size, drop_last=True)
         return test_loader, train_loader, val_loader
 
 

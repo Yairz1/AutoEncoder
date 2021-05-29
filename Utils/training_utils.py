@@ -2,7 +2,7 @@ import os
 from typing import Any
 
 import torch
-from torch import nn, optim
+from torch import optim
 
 from Architectures.lstm_autoencoder import AutoEncoder
 from Utils.data_utils import DataUtils
@@ -11,35 +11,48 @@ from Utils.data_utils import DataUtils
 class TrainingUtils:
     @staticmethod
     def test_accuracy(net, criterion, test_loader, device="cpu"):
+        loss = 0
+        steps = 0
         with torch.no_grad():
-            test_input = next(iter(test_loader))
-            test_input = test_input.to(device)
-            test_output = net(test_input)
-        loss = criterion(test_input, test_output).item()
-        print(f"Test MSE loss = {loss}")
+            for data in test_loader:
+                data = data.to(device)
+                data_output = net(data)
+                loss += criterion(data, data_output).item()
+                steps += 1
+        print(f"Test MSE loss = {loss / steps}")
         return loss
 
     @staticmethod
-    def init(batch_size, lstm_layers_size, hidden_size: int, path: str, checkpoint_dir: str, device: Any):
+    def init(batch_size, lr, optimizer, lstm_layers_size, hidden_size: int, path: str, checkpoint_dir: str,
+             device: Any):
         test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, batch_size)
 
         auto_encoder = AutoEncoder(input_size=1,
                                    input_seq_size=50,
                                    hidden_size=hidden_size,
                                    num_layers=lstm_layers_size,
+                                   batch_size=batch_size,
                                    device=device)
-        optimizer = optim.SGD(auto_encoder.parameters(), lr=0.001, momentum=0.9)
+        if optimizer == "adam":
+            optimizer = optim.Adam(auto_encoder.parameters(), lr=lr)
+        else:
+            optimizer = optim.SGD(auto_encoder.parameters(), lr=lr, momentum=0.9)
+
         if checkpoint_dir:
             model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
             auto_encoder.load_state_dict(model_state)
             auto_encoder = auto_encoder.to(device)
             optimizer.load_state_dict(optimizer_state)
-        return auto_encoder, train_loader, val_loader, test_loader,  optimizer
+        return auto_encoder, train_loader, val_loader, test_loader, optimizer
 
     @staticmethod
-    def train_synthetic(config, batch_size, criterion, lstm_layers_size, epochs, device, checkpoint_dir=None, data_dir=None):
-        auto_encoder, train_loader, val_loader, test_loader,  optimizer = TrainingUtils.init(
+    def train_synthetic(config, batch_size, lr, optimizer, criterion, lstm_layers_size, epochs, device,
+                        checkpoint_dir=None,
+                        data_dir=None):
+        auto_encoder, train_loader, val_loader, test_loader, optimizer = TrainingUtils.init(
             batch_size,
+            lr,
+            optimizer,
             lstm_layers_size,
             config["hidden_size"],
             data_dir,

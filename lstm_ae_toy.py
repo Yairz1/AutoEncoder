@@ -17,7 +17,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=2, metavar='N',
+parser.add_argument('--epochs', type=int, default=500, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--clip', type=float, default=1, metavar='N',
                     help='Value to clip the gradient, default 1')
@@ -25,6 +25,8 @@ parser.add_argument('--context-size', type=int, default=25, metavar='N',
                     help='Context vector size, default 25')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
+parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
+                    help='optimizer, default adam')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
@@ -55,9 +57,6 @@ def main():
     # plot_synthetic_samples()
 
     data_dir = os.path.join("data", "synthetic_data")
-    # config = {"hidden_size": [10, 20, 30],
-    #           "lr": [0.001, 0.01, 0.1],
-    #           "grad_clip": [1, 1.5, 2]}
     config = {"hidden_size": [256],
               "lr": [0.001],
               "grad_clip": [1]}
@@ -69,11 +68,14 @@ def main():
     tune.run(train_func=partial(TrainingUtils.train_synthetic,
                                 batch_size=args.batch_size,
                                 criterion=criterion,
+                                optimizer=args.optimizer,
                                 lstm_layers_size=args.lstm_layers_size,
                                 epochs=args.epochs,
                                 device=device,
                                 data_dir=data_dir),
-             test_func=partial(TrainingUtils.test_accuracy, criterion=criterion, test_loader=test_loader,
+             test_func=partial(TrainingUtils.test_accuracy,
+                               criterion=criterion,
+                               test_loader=test_loader,
                                device=device))
 
     compare_reconstruction(device, test_loader, tune)
