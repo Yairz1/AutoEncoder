@@ -25,10 +25,10 @@ parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
 parser.add_argument('--load', type=bool, default=True, metavar='N',
                     help='To load or create new data, default True')
-parser.add_argument('--input-size', type=bool, default=True, metavar='N',
-                    help='To load or create new data, default True')
-parser.add_argument('--seq-len', type=bool, default=True, metavar='N',
-                    help='To load or create new data, default True')
+parser.add_argument('--input-size', type=int, default=1, metavar='N',
+                    help='LSTM feature input size, default 1')
+parser.add_argument('--seq-len', type=int, default=784, metavar='N',
+                    help='LSTM sequence series length, default 784')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
