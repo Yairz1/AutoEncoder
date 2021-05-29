@@ -70,12 +70,13 @@ class VisualizationUtils:
 
     @staticmethod
     def plot_dict(path: str, config2info: Dict, title: str):
-        fig, axs = plt.subplots(len(config2info))
         if len(config2info) > 1:
+            fig, axs = plt.subplots(len(config2info),figsize=(10, 30))
             for ax, (config_str, config_info) in zip(axs, config2info.items()):
                 VisualizationUtils.single_plot(ax, config_info, config_str)
-            fig.tight_layout(pad=5.0)
+                fig.tight_layout(pad=5.0)
         else:
+            fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
             VisualizationUtils.single_plot(axs, list(config2info.values())[0], list(config2info.keys())[0])
         fig.suptitle(title)
         plt.show()

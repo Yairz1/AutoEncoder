@@ -19,16 +19,21 @@ class TrainingUtils:
                 data_output = net(data)
                 loss += criterion(data, data_output).item()
                 steps += 1
-        print(f"Test MSE loss = {loss / steps}")
+        print(f"Test loss = {loss / steps}")
         return loss
 
     @staticmethod
-    def init(batch_size, lr, optimizer, lstm_layers_size, hidden_size: int, path: str, checkpoint_dir: str,
+    def init(input_size,
+             input_seq_size,
+             batch_size,
+             lr,
+             optimizer,
+             lstm_layers_size,
+             hidden_size: int,
+             checkpoint_dir: str,
              device: Any):
-        test_loader, train_loader, val_loader = DataUtils.load_synthetic_data(path, batch_size)
-
-        auto_encoder = AutoEncoder(input_size=1,
-                                   input_seq_size=50,
+        auto_encoder = AutoEncoder(input_size=input_size,
+                                   input_seq_size=input_seq_size,
                                    hidden_size=hidden_size,
                                    num_layers=lstm_layers_size,
                                    batch_size=batch_size,
@@ -43,34 +48,43 @@ class TrainingUtils:
             auto_encoder.load_state_dict(model_state)
             auto_encoder = auto_encoder.to(device)
             optimizer.load_state_dict(optimizer_state)
-        return auto_encoder, train_loader, val_loader, test_loader, optimizer
+        return auto_encoder, optimizer
 
     @staticmethod
-    def train_synthetic(config, batch_size, optimizer, criterion, lstm_layers_size, epochs, device,
-                        checkpoint_dir=None,
-                        data_dir=None):
-        auto_encoder, train_loader, val_loader, test_loader, optimizer = TrainingUtils.init(
-            batch_size,
-            config['lr'],
-            optimizer,
-            lstm_layers_size,
-            config["hidden_size"],
-            data_dir,
-            checkpoint_dir,
-            device)
+    def train(config, input_size, input_seq_size, dataset_name, batch_size, optimizer, criterion, lstm_layers_size,
+              epochs, device, load_data,
+              checkpoint_dir=None,
+              data_dir=None):
+        auto_encoder, optimizer = TrainingUtils.init(input_size,
+                                                     input_seq_size,
+                                                     batch_size,
+                                                     config['lr'],
+                                                     optimizer,
+                                                     lstm_layers_size,
+                                                     config["hidden_size"],
+                                                     checkpoint_dir,
+                                                     device)
         auto_encoder.to(device)
+        test_loader, train_loader, val_loader = DataUtils.data_loader_factory(dataset_name,
+                                                                              data_dir,
+                                                                              batch_size,
+                                                                              load_data)
+
         training_info = []
         val_info = []
         for epoch in range(epochs):  # loop over the dataset multiple times
             running_loss = 0.0
             epoch_steps = 0
             for i, data in enumerate(train_loader, 0):
+                if len(data) == 2:
+                    data, labels = data
                 data = data.to(device)
                 optimizer.zero_grad()
                 outputs = auto_encoder(data)
                 loss = criterion(outputs, data)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
+                if config['grad_clip']:
+                    torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
                 optimizer.step()
 
                 # print statistics

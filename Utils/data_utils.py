@@ -1,12 +1,36 @@
-from typing import Union, Optional, Type, Any
+from typing import Union, Optional, Type, Any, Tuple
 
 import os
 import torch
 from torch.utils.data import random_split, DataLoader
 from torch import device
 from torch.distributions.uniform import Uniform
+from torchvision.datasets import MNIST
+from torchvision.transforms import transforms
+from torch.utils.data import random_split
+
 
 class DataUtils:
+    @staticmethod
+    def data_loader_factory(dataset_name: str, path: str, batch_size: int, load: bool) -> Tuple:
+        if dataset_name.lower() == "mnist":
+            return DataUtils.load_mnist(root=path, batch_size=batch_size)
+        elif dataset_name.lower() == "synthetic_data":
+            return DataUtils.load_synthetic_data(path, batch_size, load)
+        else:
+            raise Exception("Dataset not supported")
+
+    class Normalization:
+        def __init__(self, average: float):
+            self.average = average
+
+        def __call__(self, sample):
+            _min = sample.min()
+            _max = sample.max()
+            sample = (sample - _min) / (2 * (_max - _min))
+            sample = sample - sample.mean() + 0.5
+            return sample
+
     @staticmethod
     def create_synthetic_data(size: int,
                               sample_size: int,
@@ -52,10 +76,10 @@ class DataUtils:
         return random_split(dataset=data, lengths=(train_size, val_size, test_size))
 
     @staticmethod
-    def load_synthetic_data(path, batch_size):
+    def load_synthetic_data(path, batch_size, load):
         data_size = 10000
         series_size = 50
-        dataset = DataUtils.create_synthetic_data(data_size, series_size, device, path)
+        dataset = DataUtils.create_synthetic_data(data_size, series_size, device, path, load)
         dataset = dataset.unsqueeze(2)
         train, val, test = DataUtils.train_val_test_split(dataset, 0.6, 0.2, 0.2)
         train_loader = DataLoader(train, batch_size=batch_size, drop_last=True)
@@ -63,5 +87,16 @@ class DataUtils:
         test_loader = DataLoader(test, batch_size=batch_size, drop_last=True)
         return test_loader, train_loader, val_loader
 
-
-DataUtils.create_synthetic_data(10000, 50, "cpu", "")
+    @staticmethod
+    def load_mnist(root, batch_size=128):
+        """Reference https://github.com/pytorch/examples/blob/master/mnist/main.py"""
+        transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Normalize((0.1307,), (0.3081,))
+                                        ])
+        train_set = MNIST(root, train=True, download=True, transform=transform)
+        test_set = MNIST(root, train=False, transform=transform)
+        train_set, val_set = random_split(train_set, [int(len(train_set) * 0.8), int(len(train_set) * 0.2)])
+        train_loader = DataLoader(train_set, batch_size=batch_size, drop_last=True)
+        val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
+        test_loader = DataLoader(test_set, batch_size=batch_size, drop_last=True)
+        return train_loader, val_loader, test_loader

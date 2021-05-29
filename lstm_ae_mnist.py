@@ -1,23 +1,21 @@
 import os
 from functools import partial
 
+from matplotlib import pyplot as plt
 from torch import nn
 
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
-from Utils.visualization_utils import VisualizationUtils
 
 import torch
-from torch.utils.tensorboard import SummaryWriter
 
 import argparse
 
-writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=2, metavar='N',
+parser.add_argument('--epochs', type=int, default=500, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -31,44 +29,37 @@ args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
 
-def plot_synthetic_samples(path, data_dir):
-    synthetic_data = DataUtils.create_synthetic_data(size=10000,
-                                                     sample_size=50,
-                                                     device_type="cpu",
-                                                     path=data_dir,
-                                                     load=False)
-    VisualizationUtils.visualize_data_examples(synthetic_data,
-                                               n=3,
-                                               title='Synthetic samples',
-                                               xlabel='Time',
-                                               ylabel='Value',
-                                               path=path)
+def plot_mnist(path, n, loader):
+    images, labels = next(iter(loader))
+    fig, axs = plt.subplots(n)
+    for i, ax in enumerate(axs):
+        ax.imshow(images[i].reshape(-1, -1), cmap="gray")
+    fig.show()
+    if path:
+        fig.savefig(path)
 
 
-def compare_reconstruction(device, test_loader, model, path):
+def compare_mnist_reconstruction(device, test_loader, model, path):
     with torch.no_grad():
-        test_input = next(iter(test_loader))
-        test_input = test_input.to(device)
-        reconstructed = model(test_input)
-        VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
+        pass
 
 
 def main():
-    data_dir = os.path.join("data", "synthetic_data")
-    # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots")
-    plot_synthetic_samples(os.path.join(plots_suffix, "synthetic_data_examples"), data_dir)
-    config = {"hidden_size": [40, 256],
-              "lr": [0.01, 0.001],
-              "grad_clip": [1, None]}
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size, args.load)
-    criterion = nn.MSELoss()
+    # plots_suffix = os.path.join("plots", "job_plots")
+    plots_suffix = os.path.join("plots", "mnist")
+    data_dir = os.path.join("data")
+    config = {"hidden_size": [256],
+              "lr": [0.001],
+              "grad_clip": [1, None]}
+    test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
+    plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
+    criterion = nn.CrossEntropyLoss()
     tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
                                 input_size=1,
-                                input_seq_size=50,
-                                dataset_name="synthetic_data",
+                                input_seq_size=784,
+                                dataset_name="mnist",
                                 batch_size=args.batch_size,
                                 criterion=criterion,
                                 optimizer=args.optimizer,
@@ -82,7 +73,7 @@ def main():
                                test_loader=test_loader,
                                device=device))
 
-    compare_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
+    compare_mnist_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
     print("Best trial config: {}".format(tune.best_config))
     print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))

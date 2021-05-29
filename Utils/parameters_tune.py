@@ -46,6 +46,7 @@ class ParameterTuning:
         :return:
         """
         for config in self._param_space:
+            print(f"Running config: {config}")
             auto_encoder, train_info, val_info = train_func(config)
             self.config2train_info[str(config)] = train_info
             self.config2val_info[str(config)] = val_info
