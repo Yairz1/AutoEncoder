@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 import torch
 from matplotlib import pyplot as plt
@@ -40,8 +40,7 @@ class VisualizationUtils:
                                       title: str,
                                       xlabel: str,
                                       ylabel: str,
-                                      path: str,
-                                      is_image: bool = False):
+                                      path: str):
         """
 
         :param reconstruction:
@@ -56,15 +55,8 @@ class VisualizationUtils:
 
         fig, axs = plt.subplots(n)
         for i, ax in enumerate(axs):
-            reconstruction,_ = reconstruction
-            data, labels = data
-            if is_image:
-                dim = int(data.shape[1] ** 0.5)
-                ax.imshow(data[i].reshape(dim, dim), cmap="gray")
-                ax.set_title(f"Digit {labels[i]}")
-            else:
-                ax.plot(data[i, :], label="Data")
-                ax.plot(reconstruction[i, :], label="Data")
+            ax.plot(data[i, :], label="Data")
+            ax.plot(reconstruction[i, :], label="Data")
             ax.set_title(f"Sample {i}")
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -117,7 +109,11 @@ class VisualizationUtils:
                                                          path=path)
 
     @staticmethod
-    def plot_mnist_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
+    def plot_mnist_reconstruct(reconstruction: torch.tensor,
+                               test_input: torch.tensor,
+                               n: Tuple[int, int],
+                               path: str,
+                               title: str):
         """
 
         :param reconstruction:
@@ -126,10 +122,19 @@ class VisualizationUtils:
         :return:
         """
 
-        VisualizationUtils.visualize_image_reconstruction(reconstruction=reconstruction,
-                                                          data=test_input,
-                                                          n=n,
-                                                          title="Reconstructed vs Original",
-                                                          xlabel="Time",
-                                                          ylabel="Value",
-                                                          path=path)
+        fig, axs = plt.subplots(n[0], n[1])
+        dim = int(reconstruction.shape[1] ** 0.5)
+        axs[0, 0].imshow(reconstruction[0].reshape(dim, dim), cmap="gray")
+        axs[0, 1].imshow(test_input[0].reshape(dim, dim), cmap="gray")
+        axs[1, 0].imshow(reconstruction[1].reshape(dim, dim), cmap="gray")
+        axs[1, 1].imshow(test_input[1].reshape(dim, dim), cmap="gray")
+        axs[2, 0].imshow(reconstruction[1].reshape(dim, dim), cmap="gray")
+        axs[2, 1].imshow(test_input[1].reshape(dim, dim), cmap="gray")
+
+        handles, labels = axs[0, 0].get_legend_handles_labels()
+        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        fig.tight_layout(pad=3.0)
+        fig.suptitle(title)
+        plt.show()
+        if path:
+            fig.savefig(path)

@@ -17,7 +17,7 @@ from Utils.visualization_utils import VisualizationUtils
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=2, metavar='N',
+parser.add_argument('--epochs', type=int, default=1, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -50,10 +50,10 @@ def plot_mnist(path, n, loader):
 
 def compare_mnist_reconstruction(device, test_loader, model, path):
     with torch.no_grad():
-        test_input = next(iter(test_loader))
+        test_input, _ = next(iter(test_loader))
         test_input = test_input.to(device)
         reconstructed = model(test_input)
-        VisualizationUtils.plot_mnist_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
+        VisualizationUtils.plot_mnist_reconstruct(reconstructed.cpu(), test_input.cpu(), (3, 2), path, "title")
 
 
 def main():
@@ -61,9 +61,9 @@ def main():
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots", "mnist")
     data_dir = os.path.join("data")
-    config = {"hidden_size": [256],
+    config = {"hidden_size": [128],
               "lr": [0.001],
-              "grad_clip": [1, None]}
+              "grad_clip": [1]}
     test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
     plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
     criterion = nn.MSELoss()
