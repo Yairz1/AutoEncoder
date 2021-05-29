@@ -15,9 +15,9 @@ import argparse
 from Utils.visualization_utils import VisualizationUtils
 
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
-parser.add_argument('--batch-size', type=int, default=256, metavar='N',
+parser.add_argument('--batch-size', type=int, default=120, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=5, metavar='N',
+parser.add_argument('--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -27,9 +27,9 @@ parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
 parser.add_argument('--load', type=bool, default=True, metavar='N',
                     help='To load or create new data, default True')
-parser.add_argument('--input-size', type=int, default=1, metavar='N',
+parser.add_argument('--input-size', type=int, default=28, metavar='N',
                     help='LSTM feature input size, default 1')
-parser.add_argument('--seq-len', type=int, default=784, metavar='N',
+parser.add_argument('--seq-len', type=int, default=28, metavar='N',
                     help='LSTM sequence series length, default 784')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
@@ -39,7 +39,10 @@ def plot_mnist(path, n, loader):
     images, labels = next(iter(loader))
     fig, axs = plt.subplots(n)
     for i, ax in enumerate(axs):
-        dim = int(images.shape[1] ** 0.5)
+        if images.shape[1] == 28*28:
+            dim = int(images.shape[1] ** 0.5)
+        else:
+            dim = images.shape[1]
         ax.imshow(images[i].reshape(dim, dim), cmap="gray")
         ax.set_title(f"Digit {labels[i]}")
     fig.tight_layout(pad=0.5)
@@ -61,7 +64,7 @@ def main():
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots", "mnist")
     data_dir = os.path.join("data")
-    config = {"hidden_size": [128, 256],
+    config = {"hidden_size": [512],
               "lr": [0.001],
               "grad_clip": [None]}
     test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)

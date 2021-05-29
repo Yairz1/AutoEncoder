@@ -123,7 +123,8 @@ class VisualizationUtils:
         """
 
         fig, axs = plt.subplots(n[0], n[1])
-        dim = int(reconstruction.shape[1] ** 0.5)
+        #dim = int(reconstruction.shape[1] ** 0.5)
+        dim = 28
         axs[0, 0].imshow(reconstruction[0].reshape(dim, dim), cmap="gray")
         axs[0, 1].imshow(test_input[0].reshape(dim, dim), cmap="gray")
         axs[1, 0].imshow(reconstruction[1].reshape(dim, dim), cmap="gray")

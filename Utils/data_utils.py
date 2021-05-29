@@ -99,7 +99,7 @@ class DataUtils:
         """Reference https://github.com/pytorch/examples/blob/master/mnist/main.py"""
         transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.1307,), (0.3081,)),
-                                        DataUtils.ReshapeTransform(shape=(784, 1))
+                                        DataUtils.ReshapeTransform(shape=(28, 28))
                                         ])
         train_set = MNIST(root, train=True, download=True, transform=transform)
         test_set = MNIST(root, train=False, transform=transform)
