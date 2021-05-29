@@ -25,6 +25,10 @@ parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
 parser.add_argument('--load', type=bool, default=True, metavar='N',
                     help='To load or create new data, default True')
+parser.add_argument('--input-size', type=bool, default=True, metavar='N',
+                    help='To load or create new data, default True')
+parser.add_argument('--seq-len', type=bool, default=True, metavar='N',
+                    help='To load or create new data, default True')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
@@ -33,7 +37,10 @@ def plot_mnist(path, n, loader):
     images, labels = next(iter(loader))
     fig, axs = plt.subplots(n)
     for i, ax in enumerate(axs):
-        ax.imshow(images[i].reshape(-1, -1), cmap="gray")
+        dim = int(images.shape[1] ** 0.5)
+        ax.imshow(images[i].reshape(dim, dim), cmap="gray")
+        ax.set_title(f"Digit {labels[i]}")
+    fig.tight_layout(pad=0.5)
     fig.show()
     if path:
         fig.savefig(path)
@@ -57,8 +64,8 @@ def main():
     criterion = nn.CrossEntropyLoss()
     tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
-                                input_size=1,
-                                input_seq_size=784,
+                                input_size=args.input_size,
+                                input_seq_size=args.seq_len,
                                 dataset_name="mnist",
                                 batch_size=args.batch_size,
                                 criterion=criterion,
