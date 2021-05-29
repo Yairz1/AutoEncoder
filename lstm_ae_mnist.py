@@ -61,7 +61,7 @@ def main():
               "grad_clip": [1, None]}
     test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
     plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
                                 input_size=args.input_size,
