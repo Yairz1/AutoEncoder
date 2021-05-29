@@ -100,6 +100,8 @@ class TrainingUtils:
             val_loss = 0.0
             val_steps = 0
             for i, data in enumerate(val_loader, 0):
+                if len(data) == 2:
+                    data, labels = data
                 with torch.no_grad():
                     data = data.to(device)
                     outputs = auto_encoder(data)
