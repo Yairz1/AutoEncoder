@@ -28,25 +28,28 @@ class VisualizationUtils:
         fig.legend(handles, labels, loc='upper left')
         fig.tight_layout(pad=3.0)
         fig.suptitle(title)
-        if path:
-            plt.savefig(path)
         plt.show()
+        if path:
+            fig.savefig(path)
 
     @staticmethod
     def plot_dict(path: str, config2info: Dict, title: str):
         fig, axs = plt.subplots(len(config2info))
-        for ax, (config_str, config_info) in zip(axs, config2info.items()):
-            VisualizationUtils.single_plot(ax, config_info, config_str)
-        fig.tight_layout(pad=5.0)
+        if len(config2info) > 1:
+            for ax, (config_str, config_info) in zip(axs, config2info.items()):
+                VisualizationUtils.single_plot(ax, config_info, config_str)
+            fig.tight_layout(pad=5.0)
+        else:
+            VisualizationUtils.single_plot(axs, list(config2info.values())[0], list(config2info.keys())[0])
         fig.suptitle(title)
-        if path:
-            plt.savefig(path)
         plt.show()
+        if path:
+            fig.savefig(path)
 
     @staticmethod
     def single_plot(ax, config_info, config_str):
         ax.plot(config_info, label="Data")
-        ax.set_title(f"Configuration {config_str}")
+        ax.set_title(f"Configuration {config_str}", pad=3)
         ax.set_xlabel("Epochs")
         ax.set_ylabel("Loss")
 

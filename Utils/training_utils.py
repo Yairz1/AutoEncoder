@@ -57,7 +57,7 @@ class TrainingUtils:
                 outputs = auto_encoder(data)
                 loss = criterion(outputs, data)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
+                # torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
                 optimizer.step()
 
                 # print statistics

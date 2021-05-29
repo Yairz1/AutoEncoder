@@ -91,7 +91,7 @@ class ParameterTuning:
         fig.suptitle("Best training info")
         fig.show()
         if path:
-            ax.save(path)
+            fig.savefig(path)
 
     def plot_best_val(self, path):
         config_key = str(self.best_config)
@@ -100,4 +100,4 @@ class ParameterTuning:
         fig.suptitle("Best validation info")
         fig.show()
         if path:
-            ax.save(path)
+            fig.savefig(path)
