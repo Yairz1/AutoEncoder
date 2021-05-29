@@ -31,6 +31,13 @@ class DataUtils:
             sample = sample - sample.mean() + 0.5
             return sample
 
+    class ReshapeTransform:
+        def __init__(self, shape):
+            self.shape = shape
+
+        def __call__(self, x):
+            return x.reshape(self.shape)
+
     @staticmethod
     def create_synthetic_data(size: int,
                               sample_size: int,
@@ -91,7 +98,8 @@ class DataUtils:
     def load_mnist(root, batch_size=128):
         """Reference https://github.com/pytorch/examples/blob/master/mnist/main.py"""
         transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Normalize((0.1307,), (0.3081,))
+                                        transforms.Normalize((0.1307,), (0.3081,)),
+                                        DataUtils.ReshapeTransform(shape=(784, 1))
                                         ])
         train_set = MNIST(root, train=True, download=True, transform=transform)
         test_set = MNIST(root, train=False, transform=transform)
