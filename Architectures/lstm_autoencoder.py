@@ -41,7 +41,7 @@ class DecoderLSTM(nn.Module):
 
 class AutoEncoder(nn.Module):
     def __init__(self, input_size: int, input_seq_size: int, hidden_size: int, num_layers: int, batch_size: int,
-                 device: Any):
+                 output_size: int, device: Any):
         """
         :param input_size: Encoder input size and decoder output size
         :param hidden_size: Encoder hidden size and decoder input size
@@ -57,12 +57,12 @@ class AutoEncoder(nn.Module):
                                    batch_size=batch_size,
                                    device=device)
         self.decoder = DecoderLSTM(input_size=hidden_size,
-                                   hidden_size=input_seq_size,
+                                   hidden_size=output_size,
                                    num_layers=num_layers,
                                    input_seq_size=input_seq_size,
                                    batch_size=batch_size,
                                    device=device)
-        self.fc = nn.Linear(input_seq_size, input_size)
+        self.fc = nn.Linear(output_size, input_size)
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)

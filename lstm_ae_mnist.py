@@ -31,6 +31,8 @@ parser.add_argument('--input-size', type=int, default=28, metavar='N',
                     help='LSTM feature input size, default 1')
 parser.add_argument('--seq-len', type=int, default=28, metavar='N',
                     help='LSTM sequence series length, default 784')
+parser.add_argument('--output_size', type=int, default=28, metavar='N',
+                    help='LSTM sequence series length, default 784')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
@@ -39,11 +41,7 @@ def plot_mnist(path, n, loader):
     images, labels = next(iter(loader))
     fig, axs = plt.subplots(n)
     for i, ax in enumerate(axs):
-        if images.shape[1] == 28*28:
-            dim = int(images.shape[1] ** 0.5)
-        else:
-            dim = images.shape[1]
-        ax.imshow(images[i].reshape(dim, dim), cmap="gray")
+        ax.imshow(images[i], cmap="gray")
         ax.set_title(f"Digit {labels[i]}")
     fig.tight_layout(pad=0.5)
     fig.show()
@@ -63,8 +61,8 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots", "mnist")
-    data_dir = os.path.join("data")
-    config = {"hidden_size": [512],
+    data_dir = os.path.join("data")  #196
+    config = {"hidden_size": [196],
               "lr": [0.001],
               "grad_clip": [None]}
     test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
@@ -79,6 +77,7 @@ def main():
                                 criterion=criterion,
                                 optimizer=args.optimizer,
                                 lstm_layers_size=args.lstm_layers_size,
+                                output_size=args.output_size,
                                 epochs=args.epochs,
                                 load_data=args.load,
                                 device=device,

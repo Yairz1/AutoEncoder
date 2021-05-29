@@ -33,12 +33,14 @@ class TrainingUtils:
              lstm_layers_size,
              hidden_size: int,
              checkpoint_dir: str,
+             output_size: int,
              device: Any):
         auto_encoder = AutoEncoder(input_size=input_size,
                                    input_seq_size=input_seq_size,
                                    hidden_size=hidden_size,
                                    num_layers=lstm_layers_size,
                                    batch_size=batch_size,
+                                   output_size=output_size,
                                    device=device)
         if optimizer == "adam":
             optimizer = optim.Adam(auto_encoder.parameters(), lr=lr)
@@ -54,7 +56,7 @@ class TrainingUtils:
 
     @staticmethod
     def train(config, input_size, input_seq_size, dataset_name, batch_size, optimizer, criterion, lstm_layers_size,
-              epochs, device, load_data,
+              output_size, epochs, device, load_data,
               checkpoint_dir=None,
               data_dir=None):
         auto_encoder, optimizer = TrainingUtils.init(input_size,
@@ -65,6 +67,7 @@ class TrainingUtils:
                                                      lstm_layers_size,
                                                      config["hidden_size"],
                                                      checkpoint_dir,
+                                                     output_size,
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_loader_factory(dataset_name,

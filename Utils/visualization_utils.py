@@ -123,14 +123,9 @@ class VisualizationUtils:
         """
 
         fig, axs = plt.subplots(n[0], n[1])
-        #dim = int(reconstruction.shape[1] ** 0.5)
-        dim = 28
-        axs[0, 0].imshow(reconstruction[0].reshape(dim, dim), cmap="gray")
-        axs[0, 1].imshow(test_input[0].reshape(dim, dim), cmap="gray")
-        axs[1, 0].imshow(reconstruction[1].reshape(dim, dim), cmap="gray")
-        axs[1, 1].imshow(test_input[1].reshape(dim, dim), cmap="gray")
-        axs[2, 0].imshow(reconstruction[1].reshape(dim, dim), cmap="gray")
-        axs[2, 1].imshow(test_input[1].reshape(dim, dim), cmap="gray")
+        for i in range(n[0]):
+            axs[i, 0].imshow(reconstruction[i], cmap="gray")
+            axs[i, 1].imshow(test_input[i], cmap="gray")
 
         handles, labels = axs[0, 0].get_legend_handles_labels()
         fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
