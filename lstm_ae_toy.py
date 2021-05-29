@@ -17,7 +17,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=200, metavar='N',
+parser.add_argument('--epochs', type=int, default=2, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--clip', type=float, default=1, metavar='N',
                     help='Value to clip the gradient, default 1')
@@ -45,12 +45,12 @@ def plot_synthetic_samples():
                                                path="./plots/synthetic_samples")
 
 
-def compare_reconstruction(device, test_loader, tune):
+def compare_reconstruction(device, test_loader, tune, path):
     with torch.no_grad():
         test_input = next(iter(test_loader))
         test_input = test_input.to(device)
         reconstructed = tune.best_model(test_input)
-        VisualizationUtils.plot_context(reconstructed.cpu(), test_input.cpu(), n=3)
+        VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
 
 
 def main():
@@ -78,7 +78,7 @@ def main():
                                test_loader=test_loader,
                                device=device))
 
-    compare_reconstruction(device, test_loader, tune)
+    compare_reconstruction(device, test_loader, tune, os.path.join("plots", "reconstruct"))
     print("Best trial config: {}".format(tune.best_config))
     print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))

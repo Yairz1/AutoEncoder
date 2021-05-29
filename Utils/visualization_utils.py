@@ -33,6 +33,41 @@ class VisualizationUtils:
             fig.savefig(path)
 
     @staticmethod
+    def visualize_data_reconstruction(reconstruction: torch.tensor,
+                                      data: torch.tensor,
+                                      n: int,
+                                      title: str,
+                                      xlabel: str,
+                                      ylabel: str,
+                                      path: str):
+        """
+
+        :param reconstruction:
+        :param data:
+        :param n:
+        :param title:
+        :param xlabel:
+        :param ylabel:
+        :param path:
+        :return:
+        """
+
+        fig, axs = plt.subplots(n)
+        for i, ax in enumerate(axs):
+            ax.plot(data[i, :], label="Data")
+            ax.plot(reconstruction[i, :], label="Data")
+            ax.set_title(f"Sample {i}")
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+        handles, labels = axs[-1].get_legend_handles_labels()
+        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        fig.tight_layout(pad=3.0)
+        fig.suptitle(title)
+        plt.show()
+        if path:
+            fig.savefig(path)
+
+    @staticmethod
     def plot_dict(path: str, config2info: Dict, title: str):
         fig, axs = plt.subplots(len(config2info))
         if len(config2info) > 1:
@@ -54,13 +89,19 @@ class VisualizationUtils:
         ax.set_ylabel("Loss")
 
     @staticmethod
-    def plot_context(context: torch.tensor, test_input: torch.tensor, n: int):
+    def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
         """
 
-        :param context:
+        :param reconstruction:
         :param test_input:
         :param n:
         :return:
         """
-        VisualizationUtils.visualize_data_examples(context, 3, "Reconstructed vector", "Time", "Value", "")
-        VisualizationUtils.visualize_data_examples(test_input, 3, "Original vector", "Time", "Value", "")
+
+        VisualizationUtils.visualize_data_reconstruction(reconstruction=reconstruction,
+                                                         data=test_input,
+                                                         n=n,
+                                                         title="Reconstructed vs Original",
+                                                         xlabel="Time",
+                                                         ylabel="Value",
+                                                         path=path)
