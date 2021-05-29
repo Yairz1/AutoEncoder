@@ -40,7 +40,8 @@ class VisualizationUtils:
                                       title: str,
                                       xlabel: str,
                                       ylabel: str,
-                                      path: str):
+                                      path: str,
+                                      is_image: bool = False):
         """
 
         :param reconstruction:
@@ -55,8 +56,15 @@ class VisualizationUtils:
 
         fig, axs = plt.subplots(n)
         for i, ax in enumerate(axs):
-            ax.plot(data[i, :], label="Data")
-            ax.plot(reconstruction[i, :], label="Data")
+            reconstruction,_ = reconstruction
+            data, labels = data
+            if is_image:
+                dim = int(data.shape[1] ** 0.5)
+                ax.imshow(data[i].reshape(dim, dim), cmap="gray")
+                ax.set_title(f"Digit {labels[i]}")
+            else:
+                ax.plot(data[i, :], label="Data")
+                ax.plot(reconstruction[i, :], label="Data")
             ax.set_title(f"Sample {i}")
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -71,7 +79,7 @@ class VisualizationUtils:
     @staticmethod
     def plot_dict(path: str, config2info: Dict, title: str):
         if len(config2info) > 1:
-            fig, axs = plt.subplots(len(config2info),figsize=(10, 30))
+            fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
             for ax, (config_str, config_info) in zip(axs, config2info.items()):
                 VisualizationUtils.single_plot(ax, config_info, config_str)
                 fig.tight_layout(pad=5.0)
@@ -107,3 +115,21 @@ class VisualizationUtils:
                                                          xlabel="Time",
                                                          ylabel="Value",
                                                          path=path)
+
+    @staticmethod
+    def plot_mnist_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
+        """
+
+        :param reconstruction:
+        :param test_input:
+        :param n:
+        :return:
+        """
+
+        VisualizationUtils.visualize_image_reconstruction(reconstruction=reconstruction,
+                                                          data=test_input,
+                                                          n=n,
+                                                          title="Reconstructed vs Original",
+                                                          xlabel="Time",
+                                                          ylabel="Value",
+                                                          path=path)

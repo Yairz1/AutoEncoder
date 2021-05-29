@@ -15,6 +15,8 @@ class TrainingUtils:
         steps = 0
         with torch.no_grad():
             for data in test_loader:
+                if len(data) == 2:
+                    data, labels = data
                 data = data.to(device)
                 data_output = net(data)
                 loss += criterion(data, data_output).item()
