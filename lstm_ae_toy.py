@@ -15,9 +15,9 @@ import argparse
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=500, metavar='N',
+parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--clip', type=float, default=1, metavar='N',
                     help='Value to clip the gradient, default 1')

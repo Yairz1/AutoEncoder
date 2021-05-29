@@ -16,7 +16,7 @@ class EncoderLSTM(nn.Module):
 
     def forward(self, input: torch.tensor) -> torch.tensor:
         output, (h_n, c_n) = self.lstm(input, (self.h_0, self.c_0))
-        return torch.sigmoid(h_n[-1])  # hidden state from the last layer.
+        return torch.relu(h_n[-1])  # hidden state from the last layer.
 
 
 class DecoderLSTM(nn.Module):
@@ -36,7 +36,7 @@ class DecoderLSTM(nn.Module):
         z = z.unsqueeze(1)
         z = z.repeat(1, self.input_seq_size, 1)
         output, (h_n, c_n) = self.lstm(z, (self.h_0, self.c_0))
-        return torch.sigmoid(output)
+        return torch.relu(output)
 
 
 class AutoEncoder(nn.Module):
@@ -67,5 +67,5 @@ class AutoEncoder(nn.Module):
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)
         x_gal = self.decoder(z)
-        x_gal = torch.sigmoid(self.fc(x_gal))
+        x_gal = torch.relu(self.fc(x_gal))
         return x_gal
