@@ -4,7 +4,7 @@ import os
 import torch
 from torch.utils.data import random_split, DataLoader
 from torch import device
-
+from torch.distributions.uniform import Uniform
 
 class DataUtils:
     @staticmethod
@@ -22,9 +22,10 @@ class DataUtils:
         :param load: Either to load or create new data
         :return: Torch tensor
         """
+
         if load and path and os.path.isfile(path):
             return torch.load(path)
-        data = torch.FloatTensor(size, sample_size).uniform_(0, 0.5)
+        data = torch.FloatTensor(size, sample_size).uniform_(0, 0.7)  # empirically the max value will be less then 1
         data = data - data.mean(1)[:, None] + 0.5
         # if path:
         #     dir_path = os.path.dirname(path)

@@ -17,7 +17,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=2, metavar='N',
+parser.add_argument('--epochs', type=int, default=250, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--clip', type=float, default=1, metavar='N',
                     help='Value to clip the gradient, default 1')
@@ -25,39 +25,40 @@ parser.add_argument('--context-size', type=int, default=25, metavar='N',
                     help='Context vector size, default 25')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
+parser.add_argument('--lstm-dropout', type=int, default=0.2, metavar='N',
+                    help='lstm layers number, default 0')
 parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
 
-def plot_synthetic_samples():
+def plot_synthetic_samples(path, data_dir):
     synthetic_data = DataUtils.create_synthetic_data(size=10000,
                                                      sample_size=50,
                                                      device_type="cpu",
-                                                     path="./data/synthetic_data",
+                                                     path=data_dir,
                                                      load=False)
     VisualizationUtils.visualize_data_examples(synthetic_data,
                                                n=3,
                                                title='Synthetic samples',
                                                xlabel='Time',
                                                ylabel='Value',
-                                               path="./plots/synthetic_samples")
+                                               path=path)
 
 
-def compare_reconstruction(device, test_loader, tune, path):
+def compare_reconstruction(device, test_loader, model, path):
     with torch.no_grad():
         test_input = next(iter(test_loader))
         test_input = test_input.to(device)
-        reconstructed = tune.best_model(test_input)
+        reconstructed = model(test_input)
         VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
 
 
 def main():
-    # plot_synthetic_samples()
-
     data_dir = os.path.join("data", "synthetic_data")
-    config = {"hidden_size": [256],
+    plot_synthetic_samples(os.path.join("plots", "synthetic_data_examples"), data_dir)
+    config = {"hidden_size": [128],
               "lr": [0.001],
               "grad_clip": [1]}
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -78,7 +79,7 @@ def main():
                                test_loader=test_loader,
                                device=device))
 
-    compare_reconstruction(device, test_loader, tune, os.path.join("plots", "reconstruct"))
+    compare_reconstruction(device, test_loader, tune.best_model, os.path.join("plots", "reconstruct"))
     print("Best trial config: {}".format(tune.best_config))
     print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))

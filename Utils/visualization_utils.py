@@ -23,6 +23,7 @@ class VisualizationUtils:
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
             ax.axhline(0.5, color='red', ls='--', label='Mean')
+            ax.set_ylim((0, 1))
 
         handles, labels = axs[-1].get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper left')
