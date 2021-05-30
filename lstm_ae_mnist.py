@@ -1,4 +1,4 @@
-from Architectures.lstm_autoencoder import AutoEncoder, AutoEncoderClassifier
+from Architectures.lstm_autoencoder import MnistAutoEncoder, MnistAutoEncoderClassifier
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
