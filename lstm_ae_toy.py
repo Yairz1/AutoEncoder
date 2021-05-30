@@ -3,7 +3,7 @@ from functools import partial
 
 from torch import nn
 
-from Architectures.lstm_autoencoder import AutoEncoder, ToyAutoEncoder
+from Architectures.lstm_autoencoder import ToyAutoEncoder
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
