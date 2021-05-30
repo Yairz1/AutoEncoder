@@ -26,7 +26,7 @@ class ParamSpace:
 
 
 class ParameterTuning:
-    def __init__(self, config_options: Dict[str, List]):
+    def __init__(self, config_options: Dict[str, List], collect_accuracy_info: bool):
         """
         :param config_options:
         """
@@ -34,9 +34,13 @@ class ParameterTuning:
         self._param_space: ParamSpace = ParamSpace(config_options)
         self._best_config: Dict = dict()
         self._best_loss: float = float("inf")
+        self._best_accuracy: float = float("inf")
         self._best_model: Union[nn.Module, None] = None
         self.config2train_info: Dict[str, List] = dict()
         self.config2val_info: Dict[str, List] = dict()
+        self.config2accuracy_train_info: Dict[str, List] = dict()
+        self.config2accuracy_val_info: Dict[str, List] = dict()
+        self.collect_accuracy_info: collect_accuracy_info = collect_accuracy_info
 
     def run(self, train_func, test_func):
         """
@@ -46,14 +50,22 @@ class ParameterTuning:
         """
         for config in self._param_space:
             print(f"Running config: {config}")
-            auto_encoder, train_info, val_info = train_func(config)
+            if self.collect_accuracy_info:
+                auto_encoder, train_info, val_info, accuracy_train_info, accuracy_val_info = train_func(config)
+                self.config2accuracy_train_info[str(config)] = accuracy_train_info
+                self.config2accuracy_val_info[str(config)] = accuracy_val_info
+            else:
+                auto_encoder, train_info, val_info, _, _ = train_func(config)
+
             self.config2train_info[str(config)] = train_info
             self.config2val_info[str(config)] = val_info
-            test_loss = test_func(auto_encoder)
+
+            test_loss, test_accuracy = test_func(auto_encoder)
             if test_loss < self._best_loss:
                 self._best_config = config
                 self._best_loss = test_loss
                 self._best_model = auto_encoder
+                self._best_accuracy = test_accuracy
 
     @property
     def best_config(self):
@@ -66,6 +78,10 @@ class ParameterTuning:
     @property
     def best_model(self):
         return self._best_model
+
+    @property
+    def best_accuracy(self):
+        return self._best_accuracy
 
     def get_best_val_loss(self):
         if not self.config2val_info:
@@ -98,6 +114,26 @@ class ParameterTuning:
         fig, ax = plt.subplots()
         VisualizationUtils.single_plot(ax, self.config2val_info[config_key], config_key)
         fig.suptitle("Best validation info")
+        fig.show()
+        if path:
+            fig.savefig(path)
+
+    def plot_best_accuracy_val(self, path):
+        config_key = str(self.best_config)
+        fig, ax = plt.subplots()
+        VisualizationUtils.classification_single_plot(ax, self.config2accuracy_val_info[config_key], config_key)
+        fig.suptitle("Best accuracy validation info")
+        fig.show()
+        if path:
+            fig.savefig(path)
+
+    def plot_best_accuracy_train(self, path):
+        if not self.config2train_info:
+            raise Exception("Execute run method first")
+        config_key = str(self.best_config)
+        fig, ax = plt.subplots()
+        VisualizationUtils.classification_single_plot(ax, self.config2accuracy_train_info[config_key], config_key)
+        fig.suptitle("Best accuracy training info")
         fig.show()
         if path:
             fig.savefig(path)

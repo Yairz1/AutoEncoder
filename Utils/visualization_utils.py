@@ -91,6 +91,13 @@ class VisualizationUtils:
         ax.set_ylabel("Loss")
 
     @staticmethod
+    def classification_single_plot(ax, config_info, config_str):
+        ax.plot(config_info, label="Data")
+        ax.set_title(f"Configuration {config_str}", pad=3)
+        ax.set_xlabel("Epochs")
+        ax.set_ylabel("Accuracy")
+
+    @staticmethod
     def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
         """
 
@@ -127,6 +134,40 @@ class VisualizationUtils:
         for i in range(n[0]):
             axs[i, 0].imshow(reconstruction[i], cmap="gray")
             axs[i, 1].imshow(test_input[i], cmap="gray")
+
+        handles, labels = axs[0, 0].get_legend_handles_labels()
+        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        fig.tight_layout(pad=3.0)
+        fig.suptitle(title)
+        plt.show()
+        if path:
+            fig.savefig(path)
+
+    @staticmethod
+    def plot_mnist_reconstruct_classification(reconstruction: torch.tensor,
+                               test_input: torch.tensor,
+                               predictions: torch.tensor,
+                               labels: torch.tensor,
+                               n: Tuple[int, int],
+                               path: str,
+                               title: str):
+        """
+        :param reconstruction:
+        :param test_input:
+        :param predictions:
+        :param labels:
+        :param n:
+        :param path:
+        :param title:
+        :return:
+        """
+
+        fig, axs = plt.subplots(n[0], n[1])
+        for i in range(n[0]):
+            axs[i, 0].imshow(reconstruction[i], cmap="gray")
+            axs[i, 1].imshow(test_input[i], cmap="gray")
+            axs[i, 0].set_title(f"Predicted Digit {torch.argmax(predictions[i])}")
+            axs[i, 1].set_title(f"Digit {labels[i]}")
 
         handles, labels = axs[0, 0].get_legend_handles_labels()
         fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
