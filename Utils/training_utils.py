@@ -24,6 +24,20 @@ class TrainingUtils:
         return loss / steps
 
     @staticmethod
+    def classification_test_accuracy(net, criterion, test_loader, device, ce_criterion):
+        loss = 0
+        steps = 0
+        with torch.no_grad():
+            for data in test_loader:
+                data, labels = data
+                data, labels = data.to(device), labels.to(device)
+                reconstruct, predictions = net(data)
+                loss += (criterion(reconstruct, data) + ce_criterion(predictions, labels)).item()
+                steps += 1
+        print(f"Test loss = {loss / steps}")
+        return loss / steps
+
+    @staticmethod
     def init(auto_encoder_init,
              input_size,
              input_seq_size,
@@ -85,7 +99,6 @@ class TrainingUtils:
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_factory(dataset_name, data_dir, batch_size, load_data)
-
         training_info = []
         val_info = []
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
@@ -98,7 +111,7 @@ class TrainingUtils:
         return auto_encoder, training_info, val_info
 
     @staticmethod
-    def training_iteration(auto_encoder, config, criterion, device, optimizer, train_loader):
+    def training_iteration(auto_encoder, config, mse_criterion, device, optimizer, train_loader):
         running_loss = 0.0
         epoch_steps = 0
         for i, data in enumerate(train_loader, 0):
@@ -107,7 +120,32 @@ class TrainingUtils:
             data = data.to(device)
             optimizer.zero_grad()
             outputs = auto_encoder(data)
-            loss = criterion(outputs, data)
+            loss = mse_criterion(outputs, data)
+            loss.backward()
+            if config['grad_clip']:
+                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
+            optimizer.step()
+            # statistics
+            running_loss += loss.item()
+            epoch_steps += 1
+        return running_loss / epoch_steps
+
+    @staticmethod
+    def classification_training_iteration(auto_encoder,
+                                          config,
+                                          mse_criterion,
+                                          device,
+                                          optimizer,
+                                          train_loader,
+                                          ce_criterion):
+        running_loss = 0.0
+        epoch_steps = 0
+        for i, data in enumerate(train_loader, 0):
+            data, labels = data
+            data, labels = data.to(device), labels.to(device)
+            optimizer.zero_grad()
+            reconstruct, predictions = auto_encoder(data)
+            loss = mse_criterion(reconstruct, data) + ce_criterion(predictions, labels)
             loss.backward()
             if config['grad_clip']:
                 torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
@@ -128,6 +166,20 @@ class TrainingUtils:
                 data = data.to(device)
                 outputs = auto_encoder(data)
                 loss = criterion(outputs, data)
+                val_loss += loss.cpu().numpy()
+                val_steps += 1
+        return val_loss / val_steps
+
+    @staticmethod
+    def classification_validation(auto_encoder, criterion, device, val_loader, ce_criterion):
+        val_loss = 0.0
+        val_steps = 0
+        for i, data in enumerate(val_loader, 0):
+            with torch.no_grad():
+                data, labels = data
+                data, labels = data.to(device), labels.to(device)
+                reconstruct, predictions = auto_encoder(data)
+                loss = criterion(reconstruct, data) + ce_criterion(predictions, labels)
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
         return val_loss / val_steps

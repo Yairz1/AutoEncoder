@@ -123,7 +123,7 @@ class MnistAutoEncoder(nn.Module):
 
 class MnistAutoEncoderClassifier(nn.Module):
     def __init__(self, input_size: int, input_seq_size: int, hidden_size: int, num_layers: int, batch_size: int,
-                 decoder_output_size: int, classes: int, device: Any):
+                 decoder_output_size: int, device: Any, classes: int = 10):
         """
 
         :param input_size: Encoder input size and decoder output size
@@ -150,12 +150,17 @@ class MnistAutoEncoderClassifier(nn.Module):
                                    input_seq_size=input_seq_size,
                                    batch_size=batch_size,
                                    device=device)
-        self.fc = nn.Linear(decoder_output_size, input_size)
-        self.classifier = nn.Linear(decoder_output_size, classes)
+        self.fc = nn.Linear(decoder_output_size * input_seq_size, input_seq_size * input_size)
+        self.classifier = nn.Linear(decoder_output_size * input_seq_size, classes)
+        self.batch_size = batch_size
+        self.input_size = input_size
+        self.input_seq_size = input_seq_size
 
-    def forward(self, input: torch.tensor) -> torch.tensor:
-        context_vector = self.encoder(input)
-        decoded = self.decoder(context_vector)
-        reconstruct = torch.relu(self.fc(decoded))
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        z = self.encoder(x)
+        decoded = self.decoder(z)
+        decoded = decoded.reshape(self.batch_size, -1)
         predictions = torch.softmax(self.classifier(decoded), dim=1)
+        reconstruct = torch.relu(self.fc(decoded))
+        reconstruct = reconstruct.reshape(self.batch_size, self.input_seq_size, self.input_size)
         return reconstruct, predictions
