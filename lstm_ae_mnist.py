@@ -13,7 +13,7 @@ import argparse
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=200, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=50, metavar='N',
+parser.add_argument('--epochs', type=int, default=2, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -54,65 +54,6 @@ def compare_mnist_reconstruction_classification(device, test_loader, model, path
                                                                  (3, 2),
                                                                  path,
                                                                  "Left: reconstructed\n Right: original")
-
-
-
-def main_classifyin():
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots", "mnist")
-    data_dir = os.path.join("data")  # 196
-    config = {"hidden_size": [196],
-              "lr": [0.001],
-              "grad_clip": [None]}
-    test_loader, train_loader, _ = DataUtils.data_factory("mnist", data_dir, args.batch_size, True)
-    VisualizationUtils.plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
-    mse_criterion = nn.MSELoss()
-    ce_criterion = nn.CrossEntropyLoss()
-
-    # criterion = lambda output, target: loss(output, target[0])
-
-    tune = ParameterTuning(config_options=config, collect_accuracy_info=True)
-    tune.run(train_func=partial(TrainingUtils.train,
-                                auto_encoder_init=MnistAutoEncoderClassifier,
-                                input_size=args.input_size,
-                                input_seq_size=args.seq_len,
-                                dataset_name="mnist",
-                                batch_size=args.batch_size,
-                                criterion=mse_criterion,
-                                optimizer=args.optimizer,
-                                lstm_layers_size=args.lstm_layers_size,
-                                decoder_output_size=args.decoder_output_size,
-                                epochs=args.epochs,
-                                load_data=args.load,
-                                device=device,
-                                training_iteration=partial(TrainingUtils.classification_training_iteration,
-                                                           ce_criterion=ce_criterion),
-                                validation=partial(TrainingUtils.classification_validation,
-                                                   ce_criterion=ce_criterion),
-                                data_dir=data_dir),
-             test_func=partial(partial(TrainingUtils.classification_test_accuracy,
-                                       ce_criterion=ce_criterion),
-                               criterion=mse_criterion,
-                               test_loader=test_loader,
-                               device=device))
-
-    # compare_mnist_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
-    compare_mnist_reconstruction_classification(device,
-                                                test_loader,
-                                                tune.best_model,
-                                                os.path.join(plots_suffix,
-                                                             "reconstruct and classifying"))
-    print("Best trial config: {}".format(tune.best_config))
-    print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
-    print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
-    print("Best accuracy of the network on test set : {}".format(round(tune.best_accuracy, 3)))
-    tune.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
-    tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
-    tune.plot_best_train(path=os.path.join(plots_suffix, "best train trail"))
-    tune.plot_best_accuracy_train(path=os.path.join(plots_suffix, "best accuracy train trail"))
-    tune.plot_best_val(path=os.path.join(plots_suffix, "best validation trail"))
-    tune.plot_best_accuracy_val(path=os.path.join(plots_suffix, "best accuracy validation trail"))
 
 def main_reconstructing():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -161,6 +102,67 @@ def main_reconstructing():
     tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
     tune.plot_best_train(path=os.path.join(plots_suffix, "best train trail"))
     tune.plot_best_val(path=os.path.join(plots_suffix, "best validation trail"))
+
+def main_classifyin():
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    # plots_suffix = os.path.join("plots", "job_plots")
+    plots_suffix = os.path.join("plots", "mnist")
+    data_dir = os.path.join("data")  # 196
+    config = {"hidden_size": [196],
+              "lr": [0.001],
+              "grad_clip": [None]}
+    test_loader, train_loader, _ = DataUtils.data_factory("mnist", data_dir, args.batch_size, True)
+    VisualizationUtils.plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
+    mse_criterion = nn.MSELoss()
+    ce_criterion = nn.CrossEntropyLoss()
+
+    # criterion = lambda output, target: loss(output, target[0])
+
+    tune = ParameterTuning(config_options=config, collect_accuracy_info=True)
+    tune.run(train_func=partial(TrainingUtils.train,
+                                auto_encoder_init=MnistAutoEncoderClassifier,
+                                input_size=args.input_size,
+                                input_seq_size=args.seq_len,
+                                dataset_name="mnist",
+                                batch_size=args.batch_size,
+                                criterion=mse_criterion,
+                                optimizer=args.optimizer,
+                                lstm_layers_size=args.lstm_layers_size,
+                                decoder_output_size=args.decoder_output_size,
+                                epochs=args.epochs,
+                                load_data=args.load,
+                                device=device,
+                                training_iteration=partial(TrainingUtils.classification_training_iteration,
+                                                           ce_criterion=ce_criterion),
+                                validation=partial(TrainingUtils.classification_validation,
+                                                   ce_criterion=ce_criterion),
+                                data_dir=data_dir),
+             test_func=partial(partial(TrainingUtils.classification_test_accuracy,
+                                       ce_criterion=ce_criterion),
+                               criterion=mse_criterion,
+                               test_loader=test_loader,
+                               device=device))
+
+    # compare_mnist_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
+    compare_mnist_reconstruction_classification(device,
+                                                test_loader,
+                                                tune.best_model,
+                                                os.path.join(plots_suffix,
+                                                             "reconstruct and classifying"))
+    print("Best trial config: {}".format(tune.best_config))
+    print("Best trial final validation loss mse: {}".format(round(tune.get_best_val_loss(), 3)))
+    print("Best trial final validation loss ce: {}".format(round(tune.get_best_val_loss2(), 3)))
+    print("Best trial test loss mse: {}".format(round(tune.best_loss, 3)))
+    print("Best trial test loss ce: {}".format(round(tune.best_loss2, 3)))
+    print("Best accuracy of the network on test set : {}".format(round(tune.best_accuracy, 3)))
+    #tune.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
+    #tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
+    tune.plot_best_train_mse(path=os.path.join(plots_suffix, "best train trail mse loss"))
+    tune.plot_best_val_mse(path=os.path.join(plots_suffix, "best validation trail mse loss"))
+    tune.plot_best_train_ce(path=os.path.join(plots_suffix, "best train trail ce loss"))
+    tune.plot_best_val_ce(path=os.path.join(plots_suffix, "best validation trail ce loss"))
+    tune.plot_best_accuracy_train(path=os.path.join(plots_suffix, "best accuracy train trail"))
+    tune.plot_best_accuracy_val(path=os.path.join(plots_suffix, "best accuracy validation trail"))
 
 
 if __name__ == "__main__":
