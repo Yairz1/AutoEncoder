@@ -1,6 +1,8 @@
 from typing import Any, Tuple
 
 import os
+
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch import device
@@ -17,6 +19,8 @@ class DataUtils:
             return DataUtils.load_mnist(root=path, batch_size=batch_size)
         elif dataset_name.lower() == "synthetic_data":
             return DataUtils.load_synthetic_data(path, batch_size, load)
+        elif dataset_name.lower() == "sp500":
+            return DataUtils.load_snp500(path, batch_size)
         else:
             raise Exception("Dataset not supported")
 
@@ -108,11 +112,19 @@ class DataUtils:
         return amazon_daily_max, googl_daily_max
 
     @staticmethod
-    def load_snp500(path):
-        s_p_500 = pd.read_csv(path)
-        pass
+    def normalize(data: torch.tensor):
+        data -= data.mean(1)[:, None]
+        data /= data.std(1)[:, None]
+        return data
 
-
-import os
-
-DataUtils.load_snp500(os.path.join("data", "SP 500 Stock Prices 2014-2017.csv"))
+    @staticmethod
+    def load_snp500(path, batch_size):
+        sp_500_df = pd.read_csv(path)  # , nrows=1000)
+        sp_500_df = sp_500_df.sort_values(by="date")
+        sp_500_df = sp_500_df[["symbol", column]]
+        sp_500_group = sp_500_df.groupby('symbol')
+        stocks_names = list(sp_500_group.groups.keys())
+        sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
+        sp500_tensor = DataUtils.normalize(torch.FloatTensor(sp500_array.values))
+        data_loader = DataLoader(sp500_tensor, batch_size)
+        return data_loader, stocks_names
