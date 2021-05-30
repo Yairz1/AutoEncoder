@@ -31,7 +31,7 @@ parser.add_argument('--input-size', type=int, default=28, metavar='N',
                     help='LSTM feature input size, default 1')
 parser.add_argument('--seq-len', type=int, default=28, metavar='N',
                     help='LSTM sequence series length, default 784')
-parser.add_argument('--output_size', type=int, default=28, metavar='N',
+parser.add_argument('--decoder-output-size', type=int, default=28, metavar='N',
                     help='LSTM sequence series length, default 784')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
@@ -77,7 +77,7 @@ def main():
                                 criterion=criterion,
                                 optimizer=args.optimizer,
                                 lstm_layers_size=args.lstm_layers_size,
-                                output_size=args.output_size,
+                                decoder_output_size=args.decoder_output_size,
                                 epochs=args.epochs,
                                 load_data=args.load,
                                 device=device,

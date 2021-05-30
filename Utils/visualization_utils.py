@@ -115,10 +115,11 @@ class VisualizationUtils:
                                path: str,
                                title: str):
         """
-
         :param reconstruction:
         :param test_input:
         :param n:
+        :param path:
+        :param title:
         :return:
         """
 

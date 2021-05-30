@@ -27,7 +27,7 @@ parser.add_argument('--optimizer', type=str, default="adam", metavar='N',
                     help='optimizer, default adam')
 parser.add_argument('--load', type=bool, default=True, metavar='N',
                     help='To load or create new data, default True')
-parser.add_argument('--output_size', type=int, default=256, metavar='N',
+parser.add_argument('--decoder-output-size', type=int, default=256, metavar='N',
                     help='LSTM size at the end, default 256')
 args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
@@ -75,7 +75,7 @@ def main():
                                 criterion=criterion,
                                 optimizer=args.optimizer,
                                 lstm_layers_size=args.lstm_layers_size,
-                                output_size=args.output_size,
+                                decoder_output_size=args.decoder_output_size,
                                 epochs=args.epochs,
                                 load_data=args.load,
                                 device=device,

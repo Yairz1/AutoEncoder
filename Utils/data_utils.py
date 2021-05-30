@@ -1,10 +1,9 @@
-from typing import Union, Optional, Type, Any, Tuple
+from typing import Any, Tuple
 
 import os
 import torch
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 from torch import device
-from torch.distributions.uniform import Uniform
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 from torch.utils.data import random_split
@@ -84,7 +83,7 @@ class DataUtils:
         return test_loader, train_loader, val_loader
 
     @staticmethod
-    def load_mnist(root, batch_size=128):
+    def load_mnist(root, batch_size):
         """Reference https://github.com/pytorch/examples/blob/master/mnist/main.py"""
         transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.1307,), (0.3081,)),
