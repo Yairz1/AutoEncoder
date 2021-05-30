@@ -67,16 +67,17 @@ class AutoEncoder(nn.Module):
                                    input_seq_size=input_seq_size,
                                    batch_size=batch_size,
                                    device=device)
-        self.fc = nn.Linear(decoder_output_size * input_seq_size, decoder_output_size * input_seq_size)
+        self.fc = nn.Linear(decoder_output_size * input_seq_size, input_size * input_seq_size)
         self.batch_size = batch_size
+        self.input_size = input_size
+        self.input_seq_size = input_seq_size
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)
         decoded = self.decoder(z)
-        b, w, h = decoded.shape
-        decoded = decoded.reshape(b, w * h)
+        decoded = decoded.reshape(self.batch_size, -1)
         decoded = torch.relu(self.fc(decoded))
-        decoded = decoded.reshape(b, w, h)
+        decoded = decoded.reshape(self.batch_size, self.input_seq_size, self.input_size)
         return decoded
 
 
