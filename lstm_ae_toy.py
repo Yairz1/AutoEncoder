@@ -3,7 +3,7 @@ from functools import partial
 
 from torch import nn
 
-from Architectures.lstm_autoencoder import AutoEncoder
+from Architectures.lstm_autoencoder import AutoEncoder, ToyAutoEncoder
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
@@ -69,7 +69,7 @@ def main():
     criterion = nn.MSELoss()
     tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
-                                auto_encoder_init=AutoEncoder,
+                                auto_encoder_init=ToyAutoEncoder,
                                 input_size=1,
                                 input_seq_size=50,
                                 dataset_name="synthetic_data",
