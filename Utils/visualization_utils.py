@@ -1,5 +1,6 @@
 from typing import Dict, Tuple
 
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 
@@ -147,3 +148,8 @@ class VisualizationUtils:
         fig.show()
         if path:
             fig.savefig(path)
+
+    @staticmethod
+    def plot_df_columns(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str, ylabel: str):
+        df.plot(x=x_col, y=y_col, title=title, xlabel=xlabel, ylabel=ylabel)
+        plt.show()
