@@ -135,3 +135,15 @@ class VisualizationUtils:
         plt.show()
         if path:
             fig.savefig(path)
+
+    @staticmethod
+    def plot_mnist(path, n, loader):
+        images, labels = next(iter(loader))
+        fig, axs = plt.subplots(n)
+        for i, ax in enumerate(axs):
+            ax.imshow(images[i], cmap="gray")
+            ax.set_title(f"Digit {labels[i]}")
+        fig.tight_layout(pad=0.5)
+        fig.show()
+        if path:
+            fig.savefig(path)

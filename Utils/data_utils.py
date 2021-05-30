@@ -11,7 +11,7 @@ from torch.utils.data import random_split
 
 class DataUtils:
     @staticmethod
-    def data_loader_factory(dataset_name: str, path: str, batch_size: int, load: bool) -> Tuple:
+    def data_factory(dataset_name: str, path: str, batch_size: int, load: bool) -> Tuple:
         if dataset_name.lower() == "mnist":
             return DataUtils.load_mnist(root=path, batch_size=batch_size)
         elif dataset_name.lower() == "synthetic_data":

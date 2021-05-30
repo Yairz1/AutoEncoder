@@ -67,10 +67,54 @@ class AutoEncoder(nn.Module):
                                    input_seq_size=input_seq_size,
                                    batch_size=batch_size,
                                    device=device)
-        self.fc = nn.Linear(decoder_output_size, input_size)
+        self.fc = nn.Linear(decoder_output_size * input_seq_size, decoder_output_size * input_seq_size)
+        self.batch_size = batch_size
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)
         x_gal = self.decoder(z)
+        b, w, h = x_gal.shape
+        x_gal = x_gal.reshape(b, w * h)
         x_gal = torch.relu(self.fc(x_gal))
+        x_gal = x_gal.reshape(b, w, h)
         return x_gal
+
+
+class AutoEncoderClassifier(nn.Module):
+    def __init__(self, input_size: int, input_seq_size: int, hidden_size: int, num_layers: int, batch_size: int,
+                 decoder_output_size: int, classes: int, device: Any):
+        """
+
+        :param input_size: Encoder input size and decoder output size
+        :param hidden_size: Encoder hidden size and decoder input size
+        :param num_layers: lstm num layers
+        :param input_seq_size: length of the input seq
+        :param batch_size:
+        :param decoder_output_size: size of the decoder output
+        :param device:
+        :param classes: The size of the last layer output
+        """
+        super(AutoEncoderClassifier, self).__init__()
+        # the output of the encoder is h_t and that's why we init the decoder with input_size = hidden_size
+        # the output of the decoder should be in the same size of the origin input and that's why the
+        # hidden size = input_size
+        self.encoder = EncoderLSTM(input_size=input_size,
+                                   hidden_size=hidden_size,
+                                   num_layers=num_layers,
+                                   batch_size=batch_size,
+                                   device=device)
+        self.decoder = DecoderLSTM(input_size=hidden_size,
+                                   hidden_size=decoder_output_size,
+                                   num_layers=num_layers,
+                                   input_seq_size=input_seq_size,
+                                   batch_size=batch_size,
+                                   device=device)
+        self.fc = nn.Linear(decoder_output_size, input_size)
+        self.classifier = nn.Linear(decoder_output_size, classes)
+
+    def forward(self, input: torch.tensor) -> torch.tensor:
+        context_vector = self.encoder(input)
+        decoded = self.decoder(context_vector)
+        reconstruct = torch.relu(self.fc(decoded))
+        predictions = torch.softmax(self.classifier(decoded), dim=1)
+        return reconstruct, predictions

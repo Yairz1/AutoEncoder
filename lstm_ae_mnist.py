@@ -1,18 +1,14 @@
-import os
-from functools import partial
-
-from matplotlib import pyplot as plt
-from torch import nn
-
+from Architectures.lstm_autoencoder import AutoEncoder, AutoEncoderClassifier
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
+from Utils.visualization_utils import VisualizationUtils
 
 import torch
-
+from torch import nn
+import os
+from functools import partial
 import argparse
-
-from Utils.visualization_utils import VisualizationUtils
 
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=120, metavar='N',
@@ -37,18 +33,6 @@ args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
 
-def plot_mnist(path, n, loader):
-    images, labels = next(iter(loader))
-    fig, axs = plt.subplots(n)
-    for i, ax in enumerate(axs):
-        ax.imshow(images[i], cmap="gray")
-        ax.set_title(f"Digit {labels[i]}")
-    fig.tight_layout(pad=0.5)
-    fig.show()
-    if path:
-        fig.savefig(path)
-
-
 def compare_mnist_reconstruction(device, test_loader, model, path):
     with torch.no_grad():
         test_input, _ = next(iter(test_loader))
@@ -61,15 +45,19 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots", "mnist")
-    data_dir = os.path.join("data")  #196
+    data_dir = os.path.join("data")  # 196
     config = {"hidden_size": [196],
               "lr": [0.001],
               "grad_clip": [None]}
-    test_loader, train_loader, _ = DataUtils.data_loader_factory("mnist", data_dir, args.batch_size, True)
-    plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
+    test_loader, train_loader, _ = DataUtils.data_factory("mnist", data_dir, args.batch_size, True)
+    VisualizationUtils.plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
     criterion = nn.MSELoss()
+    # criterion = lambda output, target: loss(output, target[0])
+
     tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
+                                auto_encoder_init=AutoEncoder,
+                                # auto_encoder_init=partial(AutoEncoderClassifier, classes=10),
                                 input_size=args.input_size,
                                 input_seq_size=args.seq_len,
                                 dataset_name="mnist",
@@ -81,6 +69,8 @@ def main():
                                 epochs=args.epochs,
                                 load_data=args.load,
                                 device=device,
+                                training_iteration=TrainingUtils.training_iteration,
+                                validation=TrainingUtils.validation,
                                 data_dir=data_dir),
              test_func=partial(TrainingUtils.test_accuracy,
                                criterion=criterion,
