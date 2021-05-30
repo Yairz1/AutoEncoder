@@ -7,6 +7,7 @@ from torch import device
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 from torch.utils.data import random_split
+import pandas as pd
 
 
 class DataUtils:
@@ -96,3 +97,22 @@ class DataUtils:
         val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
         test_loader = DataLoader(test_set, batch_size=batch_size, drop_last=True)
         return train_loader, val_loader, test_loader
+
+    @staticmethod
+    def load_snp500_amzn_google_daily_max(path):
+        s_p_500 = pd.read_csv(path)
+        G_A = s_p_500[s_p_500['symbol'].isin(["AMZN", "GOOGL"])]
+        G_A = G_A.sort_values(by="date")
+        amazon_daily_max = G_A[G_A.symbol == "AMZN"]
+        googl_daily_max = G_A[G_A.symbol == "GOOGL"]
+        return amazon_daily_max, googl_daily_max
+
+    @staticmethod
+    def load_snp500(path):
+        s_p_500 = pd.read_csv(path)
+        pass
+
+
+import os
+
+DataUtils.load_snp500(os.path.join("data", "SP 500 Stock Prices 2014-2017.csv"))
