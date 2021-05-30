@@ -72,12 +72,12 @@ class AutoEncoder(nn.Module):
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         z = self.encoder(x)
-        x_gal = self.decoder(z)
-        b, w, h = x_gal.shape
-        x_gal = x_gal.reshape(b, w * h)
-        x_gal = torch.relu(self.fc(x_gal))
-        x_gal = x_gal.reshape(b, w, h)
-        return x_gal
+        decoded = self.decoder(z)
+        b, w, h = decoded.shape
+        decoded = decoded.reshape(b, w * h)
+        decoded = torch.relu(self.fc(decoded))
+        decoded = decoded.reshape(b, w, h)
+        return decoded
 
 
 class AutoEncoderClassifier(nn.Module):
