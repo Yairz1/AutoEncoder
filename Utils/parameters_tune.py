@@ -6,6 +6,7 @@ from torch import nn
 from Utils.visualization_utils import VisualizationUtils
 
 import os
+import numpy as np
 
 """
 Use example:
@@ -36,7 +37,7 @@ class ParameterTuning:
         self._param_space: ParamSpace = ParamSpace(config_options)
         self._best_config: Dict = dict()
         self._best_loss: float = float("inf")
-        self._best_loss2: float = float("inf")
+        self._test_loss: List[float]
         self._best_accuracy: float = float("inf")
         self._best_model: Union[nn.Module, None] = None
         self.config2train_info: Dict[str, dict] = dict()
@@ -58,19 +59,23 @@ class ParameterTuning:
             auto_encoder, train_info_dic, val_info_dic = train_func(config)
 
             if self.collect_accuracy_info:
-                self.config2accuracy_train_info[str(config)] = train_info_dic["accuracy"]
-                self.config2accuracy_val_info[str(config)] = val_info_dic["accuracy"]
+                self.config2accuracy_train_info[str(config)] = train_info_dic.pop("accuracy", None)
+                self.config2accuracy_val_info[str(config)] = val_info_dic.pop("accuracy", None)
 
             self.config2train_info[str(config)] = train_info_dic
             self.config2val_info[str(config)] = val_info_dic
 
             test_info = test_func(auto_encoder)
-            if test_info["total_loss"] < self._best_loss:
+            test_accuracy = test_info.pop("accuracy", None)
+            test_total_loss = sum(list(test_info.values()))
+
+            if test_total_loss < self._best_loss:
                 self._best_config = config
-                self._best_loss = test_info["total_loss"]
+                self._best_loss = test_total_loss
+                self._test_loss = list(test_info.values())
                 self._best_model = auto_encoder
                 if self.collect_accuracy_info:
-                    self._best_accuracy = test_info["accuracy"]
+                    self._best_accuracy = test_accuracy
 
     @property
     def best_config(self):
@@ -78,11 +83,11 @@ class ParameterTuning:
 
     @property
     def best_loss(self):
-        return self._best_loss
+        return np.array(self._test_loss)
 
-    @property
-    def best_loss2(self):
-        return self._best_loss2
+    # @property
+    # def best_loss2(self):
+    #     return self._test_loss
 
     @property
     def best_model(self):
@@ -95,7 +100,8 @@ class ParameterTuning:
     def get_best_val_loss(self):
         if not self.config2val_info:
             raise Exception("Execute run method first")
-        return min(self.config2val_info[str(self._best_config)])
+        values = np.array(list(self.config2val_info[str(self._best_config)].values()))
+        return np.amin(values, 1)
 
     def get_best_val_loss2(self):
         if not self.config2val_info:
@@ -112,7 +118,7 @@ class ParameterTuning:
             raise Exception("Execute run method first")
         VisualizationUtils.plot_dict(path, self.config2train_info, "Configuration and training information")
 
-    def plot_results(self, config_info, path, title, xlabel, ylabel):
+    def plot_accuracy(self, config_info, path, title, xlabel, ylabel):
         if not self.config2train_info:
             raise Exception("Execute run method first")
         path = os.path.join(path, title)
@@ -124,47 +130,39 @@ class ParameterTuning:
         if path:
             fig.savefig(path)
 
-    def plot_all_results(self, flag, plots_suffix):
+    def plot_best_loss(self, config_info, sub_path, title, xlabel, ylabel):
+        if not self.config2train_info:
+            raise Exception("Execute run method first")
+        config_key = str(self.best_config)
+        info_dic = config_info[config_key]
+        for key, value in info_dic.items():
+            fig, ax = plt.subplots()
+            path = os.path.join(sub_path, title+"_"+key)
+            VisualizationUtils.single_plot(ax, value, config_key, xlabel, ylabel)
+            fig.suptitle(title+"-"+key)
+            fig.show()
+            if path:
+                fig.savefig(path)
 
-        if flag == "Toy":
-            print("Best trial config: {}".format(self.best_config))
-            print("Best trial final validation loss: {}".format(round(self.get_best_val_loss(), 3)))
-            print("Best trial test set accuracy: {}".format(round(self.best_loss, 3)))
+    def plot_all_results(self, plots_suffix, is_accuracy, is_gridsearch):
 
-            self.plot_results(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
+        print("Best trial config: {}".format(self.best_config))
+        print("Best trial validation loss: {}".format(np.round(self.get_best_val_loss(), 3)))
+        print("Best trial test total loss: {}".format(np.round(self.best_loss, 3)))
+        self.plot_best_loss(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
+        self.plot_best_loss(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
 
+        if is_gridsearch:
             self.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
             self.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
 
-        elif flag == "Mnist_reconstructing":
-            print("Best trial config: {}".format(self.best_config))
-            print("Best trial final validation loss: {}".format(round(self.get_best_val_loss(), 3)))
-            print("Best trial test set accuracy: {}".format(round(self.best_loss, 3)))
-
-            # self.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
-            # self.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
-
-            self.plot_results(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
-
-        elif flag == "Mnist_classifying":
-            print("Best trial config: {}".format(self.best_config))
-            print("Best trial final validation loss mse: {}".format(round(self.get_best_val_loss(), 3)))
-            print("Best trial final validation loss ce: {}".format(round(self.get_best_val_loss2(), 3)))
-            print("Best trial test total loss: {}".format(round(self.best_loss, 3)))
+        if is_accuracy:
             print("Best accuracy of the network on test set : {}".format(round(self.best_accuracy, 3)))
+            self.plot_accuracy(self.config2accuracy_train_info, plots_suffix, "best_accuracy_train_trail",
+                                       "Accuracy", "Loss")
+            self.plot_accuracy(self.config2accuracy_val_info, plots_suffix, "best_accuracy_validation_trail",
+                                       "Accuracy", "Loss")
 
-            self.plot_results(self.config2train_info, plots_suffix, "best_train_trail_mse_loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info, plots_suffix, "best_validation_trail_mse_loss", "Epochs", "Loss")
-
-            self.plot_results(self.config2train_info2, plots_suffix, "best_train_trail_ce_loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info2, plots_suffix, "best_validation_trail_ce_loss", "Epochs", "Loss")
-
-            self.plot_results(self.config2accuracy_train_info, plots_suffix, "best_accuracy_train_trail", "Accuracy",
-                              "Loss")
-            self.plot_results(self.config2accuracy_val_info, plots_suffix, "best_accuracy_validation_trail", "Accuracy",
-                              "Loss")
 
     # def plot_best_train(self, path):
     #     if not self.config2train_info:

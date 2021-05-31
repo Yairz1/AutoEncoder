@@ -51,7 +51,7 @@ class TrainingUtils:
         loss_ce_avg = val_loss_ce / steps
         accuracy = 100 * correct / total
 
-        return {str("total_loss"): loss_mse_avg + loss_ce_avg, "accuracy": accuracy}
+        return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
     def init(auto_encoder_init,

@@ -96,7 +96,7 @@ def mnist_reconstructing():
                                  os.path.join(plots_suffix,
                                               "reconstruct"))
 
-    tune.plot_all_results("Mnist_reconstructing", plots_suffix)
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
 
 
 def mnist_classifying():
@@ -146,7 +146,7 @@ def mnist_classifying():
                                                 os.path.join(plots_suffix,
                                                              "reconstruct and classifying"))
 
-    tune.plot_all_results("Mnist_classifying", plots_suffix)
+    tune.plot_all_results(plots_suffix, is_accuracy=True, is_gridsearch=False)
 
 
 if __name__ == "__main__":

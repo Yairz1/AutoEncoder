@@ -18,7 +18,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',  # 500
+parser.add_argument('--epochs', type=int, default=3, metavar='N',  # 500
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -95,7 +95,7 @@ def main():
                                device=device))
 
     compare_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
-    tune.plot_all_results("Toy", plots_suffix)
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=True)
 
 
 if __name__ == "__main__":
