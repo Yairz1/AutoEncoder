@@ -18,7 +18,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=3, metavar='N',  # 500
+parser.add_argument('--epochs', type=int, default=2, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -48,27 +48,14 @@ def plot_synthetic_samples(path, data_dir):
                                                path=path)
 
 
-def compare_reconstruction(device, test_loader, model, path):
-    with torch.no_grad():
-        test_input = next(iter(test_loader))
-        test_input = test_input.to(device)
-        reconstructed = model(test_input)
-        VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
-
-
 def main():
     data_dir = os.path.join("data", "synthetic_data")
     # plots_suffix = os.path.join("plots", "job_plots")
     plots_suffix = os.path.join("plots")
     plot_synthetic_samples(os.path.join(plots_suffix, "synthetic_data_examples"), data_dir)
-    # config = {"hidden_size": [40, 256],
-    #           "lr": [0.01, 0.001],
-    #           "grad_clip": [1, None]}
-
     config = {"hidden_size": [40, 256],
-              "lr": [0.001],
-              "grad_clip": [None]}
-
+              "lr": [0.01, 0.001],
+              "grad_clip": [1, None]}
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size, args.load)
     criterion = nn.MSELoss()
@@ -94,7 +81,10 @@ def main():
                                test_loader=test_loader,
                                device=device))
 
-    compare_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
+    VisualizationUtils.compare_reconstruction(device,
+                                              test_loader,
+                                              tune.best_model,
+                                              os.path.join(plots_suffix, "reconstruct"))
     tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=True)
 
 

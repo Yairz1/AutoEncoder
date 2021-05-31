@@ -3,6 +3,7 @@ from itertools import product
 from matplotlib import pyplot as plt
 from torch import nn
 
+from Utils.data_utils import DataUtils
 from Utils.visualization_utils import VisualizationUtils
 
 import os
@@ -34,12 +35,20 @@ class ParameterTuning:
         :param config_options:
         """
         self._config_options: Dict[str, List] = config_options
-        self._param_space: ParamSpace = ParamSpace(config_options)
+        if config_options:
+            self._param_space: ParamSpace = ParamSpace(config_options)
         self._best_config: Dict = dict()
+        self._best_val_loss: float = float("inf")
+        self._test_loss: float = float("inf")
+        self._best_fold: int = 0
         self._best_loss: float = float("inf")
         self._test_loss: List[float]
         self._best_accuracy: float = float("inf")
         self._best_model: Union[nn.Module, None] = None
+        self.config2train_info: Dict[str, List] = dict()
+        self.config2val_info: Dict[str, List] = dict()
+        self.fold_train_info: List[float] = []
+        self.fold_val_info: List[float] = []
         self.config2train_info: Dict[str, dict] = dict()
         self.config2train_info2: Dict[str, List] = dict()
         self.config2val_info: Dict[str, dict] = dict()
@@ -76,6 +85,29 @@ class ParameterTuning:
                 self._best_model = auto_encoder
                 if self.collect_accuracy_info:
                     self._best_accuracy = test_accuracy
+
+    def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size):
+        """
+
+        :param train_func:
+        :param test_func:
+        :param data_tensor:
+        :param data_generator:
+        :param batch_size:
+        :return:
+        """
+        for i, (tr_ind, val_ind) in enumerate(data_generator):
+            print(f"K = {i}")
+            train_loader = DataUtils.create_data_loader(data_tensor[tr_ind, :], batch_size)
+            val_loader = DataUtils.create_data_loader(data_tensor[val_ind, :], batch_size)
+            auto_encoder, train_info, val_info = train_func(train_loader, val_loader)
+            self.fold_train_info.append(train_info)
+            self.fold_val_info.append(val_info)
+            if val_info[-1] < self._best_val_loss:
+                self._best_fold = i
+                self._best_model = auto_encoder
+
+        self._test_loss = test_func(auto_encoder)
 
     @property
     def best_config(self):
@@ -163,43 +195,3 @@ class ParameterTuning:
             self.plot_accuracy(self.config2accuracy_val_info, plots_suffix, "best_accuracy_validation_trail",
                                        "Accuracy", "Loss")
 
-
-    # def plot_best_train(self, path):
-    #     if not self.config2train_info:
-    #         raise Exception("Execute run method first")
-    #     config_key = str(self.best_config)
-    #     fig, ax = plt.subplots()
-    #     VisualizationUtils.single_plot(ax, self.config2train_info[config_key], config_key)
-    #     fig.suptitle("Best training info")
-    #     fig.show()
-    #     if path:
-    #         fig.savefig(path)
-    #
-    # def plot_best_val(self, path):
-    #     config_key = str(self.best_config)
-    #     fig, ax = plt.subplots()
-    #     VisualizationUtils.single_plot(ax, self.config2val_info[config_key], config_key)
-    #     fig.suptitle("Best validation info")
-    #     fig.show()
-    #     if path:
-    #         fig.savefig(path)
-    #
-    # def plot_best_accuracy_val(self, path):
-    #     config_key = str(self.best_config)
-    #     fig, ax = plt.subplots()
-    #     VisualizationUtils.classification_single_plot(ax, self.config2accuracy_val_info[config_key], config_key)
-    #     fig.suptitle("Best accuracy validation info")
-    #     fig.show()
-    #     if path:
-    #         fig.savefig(path)
-    #
-    # def plot_best_accuracy_train(self, path):
-    #     if not self.config2train_info:
-    #         raise Exception("Execute run method first")
-    #     config_key = str(self.best_config)
-    #     fig, ax = plt.subplots()
-    #     VisualizationUtils.classification_single_plot(ax, self.config2accuracy_train_info[config_key], config_key)
-    #     fig.suptitle("Best accuracy training info")
-    #     fig.show()
-    #     if path:
-    #         fig.savefig(path)

@@ -198,3 +198,11 @@ class VisualizationUtils:
     def plot_df_columns(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str, ylabel: str):
         df.plot(x=x_col, y=y_col, title=title, xlabel=xlabel, ylabel=ylabel)
         plt.show()
+
+    @staticmethod
+    def compare_reconstruction(device, test_loader, model, path):
+        with torch.no_grad():
+            test_input = next(iter(test_loader))
+            test_input = test_input.to(device)
+            reconstructed = model(test_input)
+            VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)

@@ -1,6 +1,8 @@
 from typing import Any, Tuple
 
 import os
+
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch import device
@@ -17,6 +19,8 @@ class DataUtils:
             return DataUtils.load_mnist(root=path, batch_size=batch_size)
         elif dataset_name.lower() == "synthetic_data":
             return DataUtils.load_synthetic_data(path, batch_size, load)
+        elif dataset_name.lower() == "sp500":
+            return DataUtils.load_snp500(path, batch_size)
         else:
             raise Exception("Dataset not supported")
 
@@ -53,7 +57,8 @@ class DataUtils:
         return data
 
     @staticmethod
-    def train_val_test_split(data: torch.tensor, train_ratio: float, val_ratio: float, test_ratio: float):
+    def train_val_test_split(data: torch.tensor, train_ratio: float, val_ratio: float, test_ratio: float,
+                             with_test=True):
         """
         return splitting data if not exist in path
         :param data: data to split
@@ -63,13 +68,17 @@ class DataUtils:
         :return: train, val and test sets
         """
         if train_ratio + val_ratio + test_ratio != 1 and not (
-                0 < train_ratio < 1 and 0 < val_ratio < 1 and 0 < test_ratio < 1):
+                0 <= train_ratio < 1 and 0 <= val_ratio < 1 and 0 <= test_ratio < 1):
             raise Exception(f"Train - val - test ratio are not valid {train_ratio}|{val_ratio}|{test_ratio}")
         data_size = data.shape[0]
+        if with_test:
+            train_size = int(data_size * train_ratio)
+            val_size = int(data_size * val_ratio)
+            test_size = data_size - train_size - val_size
+            return random_split(dataset=data, lengths=(train_size, val_size, test_size))
         train_size = int(data_size * train_ratio)
-        val_size = int(data_size * val_ratio)
-        test_size = int(data_size * test_ratio)
-        return random_split(dataset=data, lengths=(train_size, val_size, test_size))
+        val_size = data_size - train_size
+        return random_split(dataset=data, lengths=(train_size, val_size))
 
     @staticmethod
     def load_synthetic_data(path, batch_size, load):
@@ -108,11 +117,37 @@ class DataUtils:
         return amazon_daily_max, googl_daily_max
 
     @staticmethod
-    def load_snp500(path):
-        #s_p_500 = pd.read_csv(path)
-        pass
+    def normalize(data):
+        data -= data.min(1, keepdim=True)[0]
+        data /= data.max(1, keepdim=True)[0]
+        return data
+
+    @staticmethod
+    def generate_random_split(dataset, n, train_ratio, val_ratio):
+        for _ in range(n):
+            train, val = DataUtils.train_val_test_split(dataset, train_ratio, val_ratio, 0, with_test=False)
+            yield train.indices, val.indices
+
+    @staticmethod
+    def create_random_train_test_indices_split(n, train, test):
+        indices = np.random.permutation(n)
+        train_size = int(n * train)
+        return indices[:train_size], indices[train_size:]
+
+    @staticmethod
+    def load_snp500(path, batch_size):
+        sp_500_df = pd.read_csv(path)  # , nrows=1000)
+        sp_500_df = sp_500_df.sort_values(by="date")
+        sp_500_df = sp_500_df[["symbol", "close"]]
+        sp_500_group = sp_500_df.groupby('symbol')
+        stocks_names = list(sp_500_group.groups.keys())
+        sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
+        sp500_array.interpolate(inplace=True)
+        sp500_tensor = DataUtils.normalize(torch.FloatTensor(sp500_array.values))
+        return sp500_tensor, stocks_names
+
+    @staticmethod
+    def create_data_loader(data: torch.tensor, batch_size):
+        return DataLoader(data, batch_size, drop_last=True)
 
 
-import os
-
-DataUtils.load_snp500(os.path.join("data", "SP 500 Stock Prices 2014-2017.csv"))

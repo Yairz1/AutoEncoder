@@ -6,6 +6,8 @@ from torch import optim
 from tqdm import tqdm
 from Utils.data_utils import DataUtils
 from collections import defaultdict
+from torch.utils.data import random_split
+
 
 class TrainingUtils:
     @staticmethod
@@ -137,7 +139,51 @@ class TrainingUtils:
         return auto_encoder, train_info_dic, val_info_dic
 
     @staticmethod
-    def training_iteration(auto_encoder, config, mse_criterion, device, optimizer, train_loader):
+    def kfold_train(train_loader,
+                    val_loader,
+                    auto_encoder_init,
+                    lr,
+                    hidden_size,
+                    input_size,
+                    input_seq_size,
+                    batch_size,
+                    optimizer,
+                    criterion,
+                    lstm_layers_size,
+                    decoder_output_size,
+                    epochs,
+                    device,
+                    training_iteration,
+                    validation,
+                    checkpoint_dir=None):
+        auto_encoder, optimizer = TrainingUtils.init(auto_encoder_init,
+                                                     input_size,
+                                                     input_seq_size,
+                                                     batch_size,
+                                                     lr,
+                                                     optimizer,
+                                                     lstm_layers_size,
+                                                     hidden_size,
+                                                     checkpoint_dir,
+                                                     decoder_output_size,
+                                                     device)
+        auto_encoder.to(device)
+        training_info = []
+        val_info = []
+        # train_loader = DataUtils.create_data_loader(data_tensor[tr_ind, :], batch_size)
+        # val_loader = DataUtils.create_data_loader(data_tensor[val_ind, :], batch_size)
+        for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
+            average_loss = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)
+            training_info.append(average_loss)
+            # Validation loss
+            validation_average_loss = validation(auto_encoder, criterion, device, val_loader)
+            val_info.append(validation_average_loss)
+
+        print("Finished Training")
+        return auto_encoder, training_info, val_info
+
+    @staticmethod
+    def training_iteration(auto_encoder, mse_criterion, device, optimizer, train_loader):
         running_loss = 0.0
         epoch_steps = 0
         for i, data in enumerate(train_loader, 0):
@@ -148,8 +194,6 @@ class TrainingUtils:
             outputs = auto_encoder(data)
             loss = mse_criterion(outputs, data)
             loss.backward()
-            if config['grad_clip']:
-                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
             optimizer.step()
             # statistics
             running_loss += loss.item()
@@ -199,7 +243,7 @@ class TrainingUtils:
     @staticmethod
     def validation(auto_encoder, criterion, device, val_loader):
         val_loss = 0.0
-        val_steps = 0
+        val_steps = 1
         for i, data in enumerate(val_loader, 0):
             with torch.no_grad():
                 if len(data) == 2:
