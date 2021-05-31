@@ -109,7 +109,7 @@ class DataUtils:
 
     @staticmethod
     def load_snp500(path):
-        s_p_500 = pd.read_csv(path)
+        #s_p_500 = pd.read_csv(path)
         pass
 
 

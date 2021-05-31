@@ -74,22 +74,26 @@ class VisualizationUtils:
         if len(config2info) > 1:
             fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
             for ax, (config_str, config_info) in zip(axs, config2info.items()):
-                VisualizationUtils.single_plot(ax, config_info, config_str)
+                VisualizationUtils.single_plot(ax, config_info, config_str, "Epochs", "Loss")
                 fig.tight_layout(pad=5.0)
         else:
             fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
-            VisualizationUtils.single_plot(axs, list(config2info.values())[0], list(config2info.keys())[0])
+            VisualizationUtils.single_plot(axs,
+                                           list(config2info.values())[0],
+                                           list(config2info.keys())[0],
+                                           "Epochs",
+                                           "Loss")
         fig.suptitle(title)
         plt.show()
         if path:
             fig.savefig(path)
 
     @staticmethod
-    def single_plot(ax, config_info, config_str):
+    def single_plot(ax, config_info, config_str, xlabel, ylabel):
         ax.plot(config_info, label="Data")
         ax.set_title(f"Configuration {config_str}", pad=3)
-        ax.set_xlabel("Epochs")
-        ax.set_ylabel("Loss")
+        ax.set_xlabel(xlabel)  # "Epochs"
+        ax.set_ylabel(ylabel)   #"Loss
 
     @staticmethod
     def classification_single_plot(ax, config_info, config_str):

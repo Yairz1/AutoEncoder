@@ -18,7 +18,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=500, metavar='N',
+parser.add_argument('--epochs', type=int, default=10, metavar='N',  # 500
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -65,7 +65,7 @@ def main():
     #           "lr": [0.01, 0.001],
     #           "grad_clip": [1, None]}
 
-    config = {"hidden_size": [256],
+    config = {"hidden_size": [40, 256],
               "lr": [0.001],
               "grad_clip": [None]}
 
@@ -95,13 +95,7 @@ def main():
                                device=device))
 
     compare_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
-    print("Best trial config: {}".format(tune.best_config))
-    print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
-    print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
-    tune.plot_best_train(path=os.path.join(plots_suffix, "best train trail"))
-    tune.plot_best_val(path=os.path.join(plots_suffix, "best validation trail"))
-    tune.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
-    tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
+    tune.plot_all_results("Toy", plots_suffix)
 
 
 if __name__ == "__main__":
