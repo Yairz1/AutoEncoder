@@ -70,8 +70,8 @@ def main():
     criterion = nn.MSELoss()
     tune = ParameterTuning()
     tune.kfold_run(train_func=partial(TrainingUtils.kfold_train,
-                                      # auto_encoder_init=ToyAutoEncoder,
-                                      auto_encoder_init=SP500AutoEncoder,
+                                      # auto_encoder_init=SP500AutoEncoder,
+                                      auto_encoder_init=ToyAutoEncoder,
                                       lr=config["lr"],
                                       hidden_size=config["hidden_size"],
                                       input_size=1,
