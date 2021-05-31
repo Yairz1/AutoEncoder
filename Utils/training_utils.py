@@ -119,12 +119,8 @@ class TrainingUtils:
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_factory(dataset_name, data_dir, batch_size, load_data)
-
-        def def_value():
-            return []
-
-        train_info_dic = defaultdict(def_value)
-        val_info_dic = defaultdict(def_value)
+        train_info_dic = defaultdict(list)
+        val_info_dic = defaultdict(list)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
 
             train_info = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)

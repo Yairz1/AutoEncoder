@@ -93,13 +93,6 @@ class VisualizationUtils:
         ax.set_ylabel(ylabel)   #"Loss
 
     @staticmethod
-    def classification_single_plot(ax, config_info, config_str):
-        ax.plot(config_info, label="Data")
-        ax.set_title(f"Configuration {config_str}", pad=3)
-        ax.set_xlabel("Epochs")
-        ax.set_ylabel("Accuracy")
-
-    @staticmethod
     def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
         """
 

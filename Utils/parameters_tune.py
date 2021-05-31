@@ -129,9 +129,8 @@ class ParameterTuning:
     def get_best_val_loss(self):
         if not self.config2val_info:
             raise Exception("Execute run method first")
-        values = np.array(list(self.config2val_info[str(self._best_config)].values()))
-        keys = self.config2val_info[str(self._best_config)].keys()
-        return dict(zip(keys, np.amin(values, 1)))
+        loss_list = self.config2val_info[str(self._best_config)]
+        return {k: np.array(v).min() for k, v in loss_list.items()}
 
     def plot_validation_trails(self, path: str):
         if not self.config2val_info:
