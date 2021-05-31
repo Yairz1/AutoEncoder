@@ -13,7 +13,7 @@ class TrainingUtils:
     @staticmethod
     def test_accuracy(net, criterion, test_loader, device="cpu"):
         loss = 0
-        steps = 0
+        steps = 1
         with torch.no_grad():
             for data in test_loader:
                 if len(data) == 2:
