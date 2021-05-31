@@ -39,9 +39,9 @@ class ParameterTuning:
         self._best_loss2: float = float("inf")
         self._best_accuracy: float = float("inf")
         self._best_model: Union[nn.Module, None] = None
-        self.config2train_info: Dict[str, List] = dict()
+        self.config2train_info: Dict[str, dict] = dict()
         self.config2train_info2: Dict[str, List] = dict()
-        self.config2val_info: Dict[str, List] = dict()
+        self.config2val_info: Dict[str, dict] = dict()
         self.config2val_info2: Dict[str, List] = dict()
         self.config2accuracy_train_info: Dict[str, List] = dict()
         self.config2accuracy_val_info: Dict[str, List] = dict()
@@ -55,26 +55,22 @@ class ParameterTuning:
         """
         for config in self._param_space:
             print(f"Running config: {config}")
+            auto_encoder, train_info_dic, val_info_dic = train_func(config)
+
             if self.collect_accuracy_info:
-                auto_encoder, train_loss, train_loss2, val_loss, val_loss2, accuracy_train, accuracy_val = train_func(
-                    config)
-                self.config2accuracy_train_info[str(config)] = accuracy_train
-                self.config2accuracy_val_info[str(config)] = accuracy_val
-                self.config2train_info2[str(config)] = train_loss2
-                self.config2val_info2[str(config)] = val_loss2
-            else:
-                auto_encoder, train_loss, _, val_loss, _, _, _ = train_func(config)
+                self.config2accuracy_train_info[str(config)] = train_info_dic["accuracy"]
+                self.config2accuracy_val_info[str(config)] = val_info_dic["accuracy"]
 
-            self.config2train_info[str(config)] = train_loss
-            self.config2val_info[str(config)] = val_loss
+            self.config2train_info[str(config)] = train_info_dic
+            self.config2val_info[str(config)] = val_info_dic
 
-            test_loss, test_loss2, test_accuracy = test_func(auto_encoder)
-            if test_loss < self._best_loss:
+            test_info = test_func(auto_encoder)
+            if test_info["total_loss"] < self._best_loss:
                 self._best_config = config
-                self._best_loss = test_loss
-                self._best_loss2 = test_loss2
+                self._best_loss = test_info["total_loss"]
                 self._best_model = auto_encoder
-                self._best_accuracy = test_accuracy
+                if self.collect_accuracy_info:
+                    self._best_accuracy = test_info["accuracy"]
 
     @property
     def best_config(self):
@@ -146,29 +142,28 @@ class ParameterTuning:
             print("Best trial final validation loss: {}".format(round(self.get_best_val_loss(), 3)))
             print("Best trial test set accuracy: {}".format(round(self.best_loss, 3)))
 
-            # tune.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
-            # tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
+            # self.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
+            # self.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
 
-            self.plot_results(self.config2train_info, plots_suffix, "best train trail loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info, plots_suffix, "best validation trail loss", "Epochs", "Loss")
+            self.plot_results(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
+            self.plot_results(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
 
         elif flag == "Mnist_classifying":
             print("Best trial config: {}".format(self.best_config))
             print("Best trial final validation loss mse: {}".format(round(self.get_best_val_loss(), 3)))
             print("Best trial final validation loss ce: {}".format(round(self.get_best_val_loss2(), 3)))
-            print("Best trial test loss mse: {}".format(round(self.best_loss, 3)))
-            print("Best trial test loss ce: {}".format(round(self.best_loss2, 3)))
+            print("Best trial test total loss: {}".format(round(self.best_loss, 3)))
             print("Best accuracy of the network on test set : {}".format(round(self.best_accuracy, 3)))
 
-            self.plot_results(self.config2train_info, plots_suffix, "best train trail mse loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info, plots_suffix, "best validation trail mse loss", "Epochs", "Loss")
+            self.plot_results(self.config2train_info, plots_suffix, "best_train_trail_mse_loss", "Epochs", "Loss")
+            self.plot_results(self.config2val_info, plots_suffix, "best_validation_trail_mse_loss", "Epochs", "Loss")
 
-            self.plot_results(self.config2train_info2, plots_suffix, "best train trail ce loss", "Epochs", "Loss")
-            self.plot_results(self.config2val_info2, plots_suffix, "best validation trail ce loss", "Epochs", "Loss")
+            self.plot_results(self.config2train_info2, plots_suffix, "best_train_trail_ce_loss", "Epochs", "Loss")
+            self.plot_results(self.config2val_info2, plots_suffix, "best_validation_trail_ce_loss", "Epochs", "Loss")
 
-            self.plot_results(self.config2accuracy_train_info, plots_suffix, "best accuracy train trail", "Accuracy",
+            self.plot_results(self.config2accuracy_train_info, plots_suffix, "best_accuracy_train_trail", "Accuracy",
                               "Loss")
-            self.plot_results(self.config2accuracy_val_info, plots_suffix, "best accuracy validation trail", "Accuracy",
+            self.plot_results(self.config2accuracy_val_info, plots_suffix, "best_accuracy_validation_trail", "Accuracy",
                               "Loss")
 
     # def plot_best_train(self, path):

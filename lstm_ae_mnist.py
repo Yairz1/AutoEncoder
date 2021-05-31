@@ -150,5 +150,5 @@ def mnist_classifying():
 
 
 if __name__ == "__main__":
-    mnist_reconstructing()
+    #mnist_reconstructing()
     mnist_classifying()

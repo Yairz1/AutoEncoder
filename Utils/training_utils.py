@@ -5,7 +5,7 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from Utils.data_utils import DataUtils
-
+from collections import defaultdict
 
 class TrainingUtils:
     @staticmethod
@@ -21,7 +21,7 @@ class TrainingUtils:
                 loss += criterion(data, data_output).item()
                 steps += 1
         print(f"Test loss = {loss / steps}")
-        return loss / steps, 0, 0
+        return {str(criterion): loss / steps}
 
     @staticmethod
     def classification_test_accuracy(net, criterion, test_loader, device, ce_criterion):
@@ -46,7 +46,12 @@ class TrainingUtils:
                 total += labels.size(0)
                 correct += (predictions == labels).sum().item()
         print(f"Test loss = {loss / steps}")
-        return val_loss_mse / steps, val_loss_ce / steps, 100 * correct / total
+
+        loss_mse_avg = val_loss_mse / steps
+        loss_ce_avg = val_loss_ce / steps
+        accuracy = 100 * correct / total
+
+        return {str("total_loss"): loss_mse_avg + loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
     def init(auto_encoder_init,
@@ -78,6 +83,7 @@ class TrainingUtils:
             auto_encoder = auto_encoder.to(device)
             optimizer.load_state_dict(optimizer_state)
         return auto_encoder, optimizer
+
 
     @staticmethod
     def train(config,
@@ -111,35 +117,24 @@ class TrainingUtils:
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_factory(dataset_name, data_dir, batch_size, load_data)
-        training_info_reconstructing = []
-        training_info_classifying = []
 
-        val_info_reconstructing = []
-        val_info_classifying = []
-        val_info = []
-        accuracy_training_info = []
-        accuracy_val_info = []
+        def def_value():
+            return []
+
+        train_info_dic = defaultdict(def_value)
+        val_info_dic = defaultdict(def_value)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
-            loss_train_reconstructing, loss_train_classifying, accuracy_train = training_iteration(auto_encoder,
-                                                                                                   config,
-                                                                                                   criterion,
-                                                                                                   device,
-                                                                                                   optimizer,
-                                                                                                   train_loader)
-            training_info_reconstructing.append(loss_train_reconstructing)
-            training_info_classifying.append(loss_train_classifying)
-            accuracy_training_info.append(accuracy_train)
-            # Validation loss
-            val_loss_reconstructing, val_loss_classifying, validation_accuracy = validation(auto_encoder,
-                                                                                            criterion,
-                                                                                            device,
-                                                                                            val_loader)
-            val_info_reconstructing.append(val_loss_reconstructing)
-            val_info_classifying.append(val_loss_classifying)
-            accuracy_val_info.append(validation_accuracy)
+
+            train_info = training_iteration(auto_encoder, config, criterion, device, optimizer, train_loader)
+            val_info = validation(auto_encoder, criterion, device, val_loader)
+
+            for key, value in train_info.items():
+                train_info_dic[key].append(value)
+            for key, value in val_info.items():
+                val_info_dic[key].append(value)
+
         print("Finished Training")
-        return auto_encoder, training_info_reconstructing, training_info_classifying, val_info_reconstructing, \
-               val_info_classifying, accuracy_training_info, accuracy_val_info
+        return auto_encoder, train_info_dic, val_info_dic
 
     @staticmethod
     def training_iteration(auto_encoder, config, mse_criterion, device, optimizer, train_loader):
@@ -159,7 +154,7 @@ class TrainingUtils:
             # statistics
             running_loss += loss.item()
             epoch_steps += 1
-        return running_loss / epoch_steps, 0, 0
+        return {str(mse_criterion): running_loss / epoch_steps}
 
     @staticmethod
     def classification_training_iteration(auto_encoder,
@@ -195,7 +190,11 @@ class TrainingUtils:
             total += labels.size(0)
             correct += (predictions == labels).sum().item()
 
-        return running_loss_mse / epoch_steps, running_loss_ce / epoch_steps, 100 * correct / total
+        loss_mse_avg = running_loss_mse / epoch_steps
+        loss_ce_avg = running_loss_ce / epoch_steps
+        accuracy = 100 * correct / total
+
+        return {str(mse_criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
     def validation(auto_encoder, criterion, device, val_loader):
@@ -210,7 +209,7 @@ class TrainingUtils:
                 loss = criterion(outputs, data)
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
-        return val_loss / val_steps, 0, 0
+        return {str(criterion): val_loss / val_steps}
 
     @staticmethod
     def classification_validation(auto_encoder, criterion, device, val_loader, ce_criterion):
@@ -232,4 +231,9 @@ class TrainingUtils:
                 predictions = torch.argmax(predictions, 1)
                 total += labels.size(0)
                 correct += (predictions == labels).sum().item()
-        return val_loss_mse / val_steps, val_loss_ce / val_steps, 100 * correct / total
+
+        loss_mse_avg = val_loss_mse / val_steps
+        loss_ce_avg = val_loss_ce / val_steps
+        accuracy = 100 * correct / total
+
+        return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
