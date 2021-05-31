@@ -17,9 +17,9 @@ import argparse
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_snp500')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=200, metavar='N',
+parser.add_argument('--epochs', type=int, default=1000, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -64,7 +64,7 @@ def main():
               "grad_clip": None}
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     data_tensor, train_stocks_names = DataUtils.load_snp500(data_dir, args.batch_size)
-    train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.8, 0.2)
+    train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.7, 0.3)
     data_gen = DataUtils.generate_random_split(data_tensor[train_idxs], args.folds, 0.9, 0.1)
     test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), args.batch_size)
     criterion = nn.MSELoss()
@@ -93,10 +93,11 @@ def main():
                    data_generator=data_gen,
                    batch_size=args.batch_size)
 
+    test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), min(len(test_idxs),args.batch_size))
     VisualizationUtils.compare_reconstruction(device,
                                               test_loader,
                                               tune.best_model,
-                                              os.path.join(plots_suffix, "reconstruct"))
+                                              os.path.join(plots_suffix, "reconstruct_snp500"))
     # print("Best trial config: {}".format(tune.best_config))
     # print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     # print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
