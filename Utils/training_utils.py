@@ -5,6 +5,7 @@ import torch
 from torch import optim
 from tqdm import tqdm
 from Utils.data_utils import DataUtils
+from collections import defaultdict
 from torch.utils.data import random_split
 
 
@@ -22,21 +23,37 @@ class TrainingUtils:
                 loss += criterion(data, data_output).item()
                 steps += 1
         print(f"Test loss = {loss / steps}")
-        return loss / steps
+        return {str(criterion): loss / steps}
 
     @staticmethod
     def classification_test_accuracy(net, criterion, test_loader, device, ce_criterion):
+        val_loss_mse = 0.0
+        val_loss_ce = 0.0
         loss = 0
         steps = 0
+        correct = 0
+        total = 0
         with torch.no_grad():
             for data in test_loader:
                 data, labels = data
                 data, labels = data.to(device), labels.to(device)
                 reconstruct, predictions = net(data)
-                loss += (criterion(reconstruct, data) + ce_criterion(predictions, labels)).item()
+                loss_mse = criterion(reconstruct, data).item()
+                loss_ce = ce_criterion(predictions, labels).item()
+                loss += loss_mse + loss_ce
+                val_loss_mse += loss_mse
+                val_loss_ce += loss_ce
                 steps += 1
+                predictions = torch.argmax(predictions, 1)
+                total += labels.size(0)
+                correct += (predictions == labels).sum().item()
         print(f"Test loss = {loss / steps}")
-        return loss / steps
+
+        loss_mse_avg = val_loss_mse / steps
+        loss_ce_avg = val_loss_ce / steps
+        accuracy = 100 * correct / total
+
+        return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
     def init(auto_encoder_init,
@@ -69,6 +86,7 @@ class TrainingUtils:
             optimizer.load_state_dict(optimizer_state)
         return auto_encoder, optimizer
 
+
     @staticmethod
     def train(config,
               auto_encoder_init,
@@ -86,7 +104,8 @@ class TrainingUtils:
               training_iteration,
               validation,
               checkpoint_dir=None,
-              data_dir=None):
+              data_dir=None,
+              ):
         auto_encoder, optimizer = TrainingUtils.init(auto_encoder_init,
                                                      input_size,
                                                      input_seq_size,
@@ -100,16 +119,20 @@ class TrainingUtils:
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_factory(dataset_name, data_dir, batch_size, load_data)
-        training_info = []
-        val_info = []
+        train_info_dic = defaultdict(list)
+        val_info_dic = defaultdict(list)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
-            average_loss = training_iteration(auto_encoder, config, criterion, device, optimizer, train_loader)
-            training_info.append(average_loss)
-            # Validation loss
-            validation_average_loss = validation(auto_encoder, criterion, device, val_loader)
-            val_info.append(validation_average_loss)
+
+            train_info = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)
+            val_info = validation(auto_encoder, criterion, device, val_loader)
+
+            for key, value in train_info.items():
+                train_info_dic[key].append(value)
+            for key, value in val_info.items():
+                val_info_dic[key].append(value)
+
         print("Finished Training")
-        return auto_encoder, training_info, val_info
+        return auto_encoder, train_info_dic, val_info_dic
 
     @staticmethod
     def kfold_train(train_loader,
@@ -171,32 +194,44 @@ class TrainingUtils:
             # statistics
             running_loss += loss.item()
             epoch_steps += 1
-        return running_loss / epoch_steps
+        return {str(mse_criterion): running_loss / epoch_steps}
 
     @staticmethod
     def classification_training_iteration(auto_encoder,
-                                          config,
                                           mse_criterion,
                                           device,
                                           optimizer,
                                           train_loader,
                                           ce_criterion):
-        running_loss = 0.0
+        running_loss_mse = 0.0
+        running_loss_ce = 0.0
         epoch_steps = 0
+        correct = 0
+        total = 0
         for i, data in enumerate(train_loader, 0):
             data, labels = data
             data, labels = data.to(device), labels.to(device)
             optimizer.zero_grad()
             reconstruct, predictions = auto_encoder(data)
-            loss = mse_criterion(reconstruct, data) + ce_criterion(predictions, labels)
+            loss_mse = mse_criterion(reconstruct, data)
+            loss_ce = ce_criterion(predictions, labels)
+            loss = loss_mse + loss_ce
             loss.backward()
-            if config['grad_clip']:
-                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
             optimizer.step()
             # statistics
-            running_loss += loss.item()
+            running_loss_mse += loss_mse.item()
+            running_loss_ce += loss_ce.item()
             epoch_steps += 1
-        return running_loss / epoch_steps
+
+            predictions = torch.argmax(predictions, 1)
+            total += labels.size(0)
+            correct += (predictions == labels).sum().item()
+
+        loss_mse_avg = running_loss_mse / epoch_steps
+        loss_ce_avg = running_loss_ce / epoch_steps
+        accuracy = 100 * correct / total
+
+        return {str(mse_criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
     def validation(auto_encoder, criterion, device, val_loader):
@@ -211,18 +246,31 @@ class TrainingUtils:
                 loss = criterion(outputs, data)
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
-        return val_loss / val_steps
+        return {str(criterion): val_loss / val_steps}
 
     @staticmethod
     def classification_validation(auto_encoder, criterion, device, val_loader, ce_criterion):
-        val_loss = 0.0
+        val_loss_mse = 0.0
+        val_loss_ce = 0.0
         val_steps = 0
+        correct = 0
+        total = 0
         for i, data in enumerate(val_loader, 0):
             with torch.no_grad():
                 data, labels = data
                 data, labels = data.to(device), labels.to(device)
                 reconstruct, predictions = auto_encoder(data)
-                loss = criterion(reconstruct, data) + ce_criterion(predictions, labels)
-                val_loss += loss.cpu().numpy()
+                loss_mse = criterion(reconstruct, data)
+                loss_ce = ce_criterion(predictions, labels)
+                val_loss_mse += loss_mse.cpu().numpy()
+                val_loss_ce += loss_ce.cpu().numpy()
                 val_steps += 1
-        return val_loss / val_steps
+                predictions = torch.argmax(predictions, 1)
+                total += labels.size(0)
+                correct += (predictions == labels).sum().item()
+
+        loss_mse_avg = val_loss_mse / val_steps
+        loss_ce_avg = val_loss_ce / val_steps
+        accuracy = 100 * correct / total
+
+        return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}

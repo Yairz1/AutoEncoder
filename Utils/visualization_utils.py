@@ -74,22 +74,23 @@ class VisualizationUtils:
         if len(config2info) > 1:
             fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
             for ax, (config_str, config_info) in zip(axs, config2info.items()):
-                VisualizationUtils.single_plot(ax, config_info, config_str)
+                VisualizationUtils.single_plot(ax, list(config_info.values())[0], config_str, "Epochs", "Loss")
                 fig.tight_layout(pad=5.0)
         else:
             fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
-            VisualizationUtils.single_plot(axs, list(config2info.values())[0], list(config2info.keys())[0])
+            for key, value in config2info.items():
+                VisualizationUtils.single_plot(axs, list(value.values())[0], key, "Epochs", "Loss")
         fig.suptitle(title)
         plt.show()
         if path:
             fig.savefig(path)
 
     @staticmethod
-    def single_plot(ax, config_info, config_str):
-        ax.plot(config_info, label="Data")
+    def single_plot(ax, config_info, config_str, xlabel, ylabel):
+        ax.plot(list(config_info), label="Data")
         ax.set_title(f"Configuration {config_str}", pad=3)
-        ax.set_xlabel("Epochs")
-        ax.set_ylabel("Loss")
+        ax.set_xlabel(xlabel)  # "Epochs"
+        ax.set_ylabel(ylabel)   #"Loss
 
     @staticmethod
     def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
@@ -128,6 +129,40 @@ class VisualizationUtils:
         for i in range(n[0]):
             axs[i, 0].imshow(reconstruction[i], cmap="gray")
             axs[i, 1].imshow(test_input[i], cmap="gray")
+
+        handles, labels = axs[0, 0].get_legend_handles_labels()
+        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        fig.tight_layout(pad=3.0)
+        fig.suptitle(title)
+        plt.show()
+        if path:
+            fig.savefig(path)
+
+    @staticmethod
+    def plot_mnist_reconstruct_classification(reconstruction: torch.tensor,
+                               test_input: torch.tensor,
+                               predictions: torch.tensor,
+                               labels: torch.tensor,
+                               n: Tuple[int, int],
+                               path: str,
+                               title: str):
+        """
+        :param reconstruction:
+        :param test_input:
+        :param predictions:
+        :param labels:
+        :param n:
+        :param path:
+        :param title:
+        :return:
+        """
+
+        fig, axs = plt.subplots(n[0], n[1])
+        for i in range(n[0]):
+            axs[i, 0].imshow(reconstruction[i], cmap="gray")
+            axs[i, 1].imshow(test_input[i], cmap="gray")
+            axs[i, 0].set_title(f"Predicted Digit {torch.argmax(predictions[i])}")
+            axs[i, 1].set_title(f"Digit {labels[i]}")
 
         handles, labels = axs[0, 0].get_legend_handles_labels()
         fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
