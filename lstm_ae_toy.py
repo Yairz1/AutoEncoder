@@ -48,14 +48,6 @@ def plot_synthetic_samples(path, data_dir):
                                                path=path)
 
 
-def compare_reconstruction(device, test_loader, model, path):
-    with torch.no_grad():
-        test_input = next(iter(test_loader))
-        test_input = test_input.to(device)
-        reconstructed = model(test_input)
-        VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
-
-
 def main():
     data_dir = os.path.join("data", "synthetic_data")
     # plots_suffix = os.path.join("plots", "job_plots")
@@ -89,7 +81,10 @@ def main():
                                test_loader=test_loader,
                                device=device))
 
-    compare_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
+    VisualizationUtils.compare_reconstruction(device,
+                                              test_loader,
+                                              tune.best_model,
+                                              os.path.join(plots_suffix, "reconstruct"))
     print("Best trial config: {}".format(tune.best_config))
     print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
     print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
