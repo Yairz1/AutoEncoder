@@ -13,7 +13,7 @@ import argparse
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=200, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=3, metavar='N',  # 50
+parser.add_argument('--epochs', type=int, default=50, metavar='N',  # 50
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -67,7 +67,7 @@ def mnist_reconstructing():
     test_loader, train_loader, _ = DataUtils.data_factory("mnist", data_dir, args.batch_size, True)
     VisualizationUtils.plot_mnist(path=os.path.join(plots_suffix, "example"), n=3, loader=train_loader)
     criterion = nn.MSELoss()
-    tune = ParameterTuning(config_options=config, collect_accuracy_info=False)
+    tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
                                 auto_encoder_init=MnistAutoEncoder,
                                 input_size=args.input_size,
@@ -114,7 +114,7 @@ def mnist_classifying():
 
     # criterion = lambda output, target: loss(output, target[0])
 
-    tune = ParameterTuning(config_options=config, collect_accuracy_info=True)
+    tune = ParameterTuning(config_options=config)
     tune.run(train_func=partial(TrainingUtils.train,
                                 auto_encoder_init=MnistAutoEncoderClassifier,
                                 input_size=args.input_size,
@@ -137,7 +137,8 @@ def mnist_classifying():
                                        ce_criterion=ce_criterion),
                                criterion=mse_criterion,
                                test_loader=test_loader,
-                               device=device))
+                               device=device),
+             collect_accuracy_info=True)
 
     # compare_mnist_reconstruction(device, test_loader, tune.best_model, os.path.join(plots_suffix, "reconstruct"))
     compare_mnist_reconstruction_classification(device,

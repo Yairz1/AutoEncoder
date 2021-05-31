@@ -127,7 +127,7 @@ class TrainingUtils:
         val_info_dic = defaultdict(def_value)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
 
-            train_info = training_iteration(auto_encoder, config, criterion, device, optimizer, train_loader)
+            train_info = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)
             val_info = validation(auto_encoder, criterion, device, val_loader)
 
             for key, value in train_info.items():
@@ -202,7 +202,6 @@ class TrainingUtils:
 
     @staticmethod
     def classification_training_iteration(auto_encoder,
-                                          config,
                                           mse_criterion,
                                           device,
                                           optimizer,
@@ -222,8 +221,6 @@ class TrainingUtils:
             loss_ce = ce_criterion(predictions, labels)
             loss = loss_mse + loss_ce
             loss.backward()
-            if config['grad_clip']:
-                torch.nn.utils.clip_grad_norm_(auto_encoder.parameters(), config['grad_clip'])
             optimizer.step()
             # statistics
             running_loss_mse += loss_mse.item()

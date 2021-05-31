@@ -17,7 +17,7 @@ import argparse
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_snp500')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=25, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -70,8 +70,8 @@ def main():
     criterion = nn.MSELoss()
     tune = ParameterTuning()
     tune.kfold_run(train_func=partial(TrainingUtils.kfold_train,
-                                      # auto_encoder_init=SP500AutoEncoder,
-                                      auto_encoder_init=ToyAutoEncoder,
+                                      # auto_encoder_init=ToyAutoEncoder,
+                                      auto_encoder_init=SP500AutoEncoder,
                                       lr=config["lr"],
                                       hidden_size=config["hidden_size"],
                                       input_size=1,

@@ -78,11 +78,8 @@ class VisualizationUtils:
                 fig.tight_layout(pad=5.0)
         else:
             fig, axs = plt.subplots(len(config2info), figsize=(10, 30))
-            VisualizationUtils.single_plot(axs,
-                                           list(config2info.values())[0],
-                                           list(config2info.keys())[0],
-                                           "Epochs",
-                                           "Loss")
+            for key, value in config2info.items():
+                VisualizationUtils.single_plot(axs, list(value.values())[0], key, "Epochs", "Loss")
         fig.suptitle(title)
         plt.show()
         if path:

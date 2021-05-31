@@ -30,7 +30,7 @@ class ParamSpace:
 
 
 class ParameterTuning:
-    def __init__(self, config_options: Dict[str, List], collect_accuracy_info: bool):
+    def __init__(self, config_options: Dict[str, List] = None):
         """
         :param config_options:
         """
@@ -42,23 +42,20 @@ class ParameterTuning:
         self._test_loss: float = float("inf")
         self._best_fold: int = 0
         self._best_loss: float = float("inf")
-        self._test_loss: List[float]
+        self._test_loss_list: List[float] = []
         self._best_accuracy: float = float("inf")
         self._best_model: Union[nn.Module, None] = None
-        self.config2train_info: Dict[str, List] = dict()
-        self.config2val_info: Dict[str, List] = dict()
+
         self.fold_train_info: List[float] = []
         self.fold_val_info: List[float] = []
         self.config2train_info: Dict[str, dict] = dict()
-        self.config2train_info2: Dict[str, List] = dict()
         self.config2val_info: Dict[str, dict] = dict()
-        self.config2val_info2: Dict[str, List] = dict()
         self.config2accuracy_train_info: Dict[str, List] = dict()
         self.config2accuracy_val_info: Dict[str, List] = dict()
-        self.collect_accuracy_info: collect_accuracy_info = collect_accuracy_info
 
-    def run(self, train_func, test_func):
+    def run(self, train_func, test_func, collect_accuracy_info=False):
         """
+        :param collect_accuracy_info:
         :param test_func:
         :param train_func:
         :return:
@@ -67,7 +64,7 @@ class ParameterTuning:
             print(f"Running config: {config}")
             auto_encoder, train_info_dic, val_info_dic = train_func(config)
 
-            if self.collect_accuracy_info:
+            if collect_accuracy_info:
                 self.config2accuracy_train_info[str(config)] = train_info_dic.pop("accuracy", None)
                 self.config2accuracy_val_info[str(config)] = val_info_dic.pop("accuracy", None)
 
@@ -81,9 +78,9 @@ class ParameterTuning:
             if test_total_loss < self._best_loss:
                 self._best_config = config
                 self._best_loss = test_total_loss
-                self._test_loss = list(test_info.values())
+                self._test_loss_list = test_info  # list(test_info.values())
                 self._best_model = auto_encoder
-                if self.collect_accuracy_info:
+                if collect_accuracy_info:
                     self._best_accuracy = test_accuracy
 
     def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size):
@@ -114,12 +111,12 @@ class ParameterTuning:
         return self._best_config
 
     @property
+    def best_loss_list(self):
+        return np.array(self._test_loss_list)
+
+    @property
     def best_loss(self):
         return np.array(self._test_loss)
-
-    # @property
-    # def best_loss2(self):
-    #     return self._test_loss
 
     @property
     def best_model(self):
@@ -133,12 +130,8 @@ class ParameterTuning:
         if not self.config2val_info:
             raise Exception("Execute run method first")
         values = np.array(list(self.config2val_info[str(self._best_config)].values()))
-        return np.amin(values, 1)
-
-    def get_best_val_loss2(self):
-        if not self.config2val_info:
-            raise Exception("Execute run method first")
-        return min(self.config2val_info2[str(self._best_config)])
+        keys = self.config2val_info[str(self._best_config)].keys()
+        return dict(zip(keys, np.amin(values, 1)))
 
     def plot_validation_trails(self, path: str):
         if not self.config2val_info:
@@ -151,8 +144,6 @@ class ParameterTuning:
         VisualizationUtils.plot_dict(path, self.config2train_info, "Configuration and training information")
 
     def plot_accuracy(self, config_info, path, title, xlabel, ylabel):
-        if not self.config2train_info:
-            raise Exception("Execute run method first")
         path = os.path.join(path, title)
         config_key = str(self.best_config)
         fig, ax = plt.subplots()
@@ -163,15 +154,13 @@ class ParameterTuning:
             fig.savefig(path)
 
     def plot_best_loss(self, config_info, sub_path, title, xlabel, ylabel):
-        if not self.config2train_info:
-            raise Exception("Execute run method first")
         config_key = str(self.best_config)
         info_dic = config_info[config_key]
         for key, value in info_dic.items():
             fig, ax = plt.subplots()
-            path = os.path.join(sub_path, title+"_"+key)
+            path = os.path.join(sub_path, title + "_" + key)
             VisualizationUtils.single_plot(ax, value, config_key, xlabel, ylabel)
-            fig.suptitle(title+"-"+key)
+            fig.suptitle(title + "-" + key)
             fig.show()
             if path:
                 fig.savefig(path)
@@ -179,8 +168,8 @@ class ParameterTuning:
     def plot_all_results(self, plots_suffix, is_accuracy, is_gridsearch):
 
         print("Best trial config: {}".format(self.best_config))
-        print("Best trial validation loss: {}".format(np.round(self.get_best_val_loss(), 3)))
-        print("Best trial test total loss: {}".format(np.round(self.best_loss, 3)))
+        print("Best trial validation loss: {}".format(self.get_best_val_loss()))
+        print("Best trial test total loss: {}".format(self.best_loss_list))
         self.plot_best_loss(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
         self.plot_best_loss(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
 
@@ -191,7 +180,6 @@ class ParameterTuning:
         if is_accuracy:
             print("Best accuracy of the network on test set : {}".format(round(self.best_accuracy, 3)))
             self.plot_accuracy(self.config2accuracy_train_info, plots_suffix, "best_accuracy_train_trail",
-                                       "Accuracy", "Loss")
+                               "Accuracy", "Loss")
             self.plot_accuracy(self.config2accuracy_val_info, plots_suffix, "best_accuracy_validation_trail",
-                                       "Accuracy", "Loss")
-
+                               "Accuracy", "Loss")
