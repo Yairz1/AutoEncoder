@@ -83,7 +83,7 @@ class ParameterTuning:
                 if collect_accuracy_info:
                     self._best_accuracy = test_accuracy
 
-    def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size):
+    def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size, config):
         """
 
         :param train_func:
@@ -98,11 +98,19 @@ class ParameterTuning:
             train_loader = DataUtils.create_data_loader(data_tensor[tr_ind, :], batch_size)
             val_loader = DataUtils.create_data_loader(data_tensor[val_ind, :], batch_size)
             auto_encoder, train_info, val_info = train_func(train_loader, val_loader)
-            self.fold_train_info.append(train_info)
-            self.fold_val_info.append(val_info)
-            if val_info[-1] < self._best_val_loss:
-                self._best_fold = i
+
+            self.config2train_info[str(config)] = train_info
+            self.config2val_info[str(config)] = val_info
+
+            val_total_loss = np.sum(np.array(list(val_info.values()))[:, -1])  #list(val_info.values())[0][-1]
+
+            test_info = test_func(auto_encoder)
+
+            if val_total_loss < self._best_val_loss:
+                self._best_config = config
                 self._best_model = auto_encoder
+                self._best_val_loss = val_total_loss
+                self._test_loss_list = test_info
 
         self._test_loss = test_func(auto_encoder)
 

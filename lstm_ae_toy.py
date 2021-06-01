@@ -84,7 +84,9 @@ def main():
     VisualizationUtils.compare_reconstruction(device,
                                               test_loader,
                                               tune.best_model,
-                                              os.path.join(plots_suffix, "reconstruct"))
+                                              os.path.join(plots_suffix, "reconstruct"),
+                                              "Reconstructed vs Original")
+
     tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=True)
 
 

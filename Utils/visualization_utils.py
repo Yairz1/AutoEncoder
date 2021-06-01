@@ -93,7 +93,11 @@ class VisualizationUtils:
         ax.set_ylabel(ylabel)   #"Loss
 
     @staticmethod
-    def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
+    def plot_reconstruct(reconstruction: torch.tensor,
+                         test_input: torch.tensor,
+                         n: int,
+                         path: str,
+                         title: str):
         """
 
         :param reconstruction:
@@ -105,7 +109,7 @@ class VisualizationUtils:
         VisualizationUtils.visualize_data_reconstruction(reconstruction=reconstruction,
                                                          data=test_input,
                                                          n=n,
-                                                         title="Reconstructed vs Original",
+                                                         title=title,
                                                          xlabel="Time",
                                                          ylabel="Value",
                                                          path=path)
@@ -190,9 +194,9 @@ class VisualizationUtils:
         plt.show()
 
     @staticmethod
-    def compare_reconstruction(device, test_loader, model, path):
+    def compare_reconstruction(device, test_loader, model, path, title):
         with torch.no_grad():
             test_input = next(iter(test_loader))
             test_input = test_input.to(device)
             reconstructed = model(test_input)
-            VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
+            VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path, title)

@@ -135,7 +135,7 @@ class DataUtils:
         return indices[:train_size], indices[train_size:]
 
     @staticmethod
-    def load_snp500(path, batch_size):
+    def load_snp500(path, batch_size, n_division):
         sp_500_df = pd.read_csv(path)  # , nrows=1000)
         sp_500_df = sp_500_df.sort_values(by="date")
         sp_500_df = sp_500_df[["symbol", "close"]]
@@ -144,6 +144,35 @@ class DataUtils:
         sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
         sp500_array.interpolate(inplace=True)
         sp500_tensor = DataUtils.normalize(torch.FloatTensor(sp500_array.values))
+
+        sp500_tensor = np.array_split(torch.transpose(sp500_tensor, 1, 0), n_division)
+        sp500_tensor = [torch.transpose(sp500_tensor[i], 1, 0) for i in range(n_division)]
+
+        return sp500_tensor, stocks_names
+
+    @staticmethod
+    def load_snp500_double_input(path, batch_size, n_division):
+        sp_500_df = pd.read_csv(path)  # , nrows=1000)
+        sp_500_df = sp_500_df.sort_values(by="date")
+        sp_500_df = sp_500_df[["symbol", "close"]]
+        sp_500_group = sp_500_df.groupby('symbol')
+        stocks_names = list(sp_500_group.groups.keys())
+        sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
+        sp500_array.interpolate(inplace=True)
+
+        double_input = np.concatenate((np.array(sp500_array)[:, 0:1006], np.array(sp500_array)[:, 1:1007]), axis=1)
+        double_input = np.array(DataUtils.normalize(torch.FloatTensor(double_input)))
+
+        first_input = torch.FloatTensor(double_input[:, 0:1006])
+        first_input = np.array_split(torch.transpose(first_input, 1, 0), n_division)
+        first_input = [torch.transpose(first_input[i], 1, 0) for i in range(n_division)]
+
+        second_input = torch.FloatTensor(double_input[:, 1006:])
+        second_input = np.array_split(torch.transpose(second_input, 1, 0), n_division)
+        second_input = [torch.transpose(second_input[i], 1, 0) for i in range(n_division)]
+
+        sp500_tensor = [torch.cat((first_input[i], second_input[i]), 1) for i in range(n_division)]
+
         return sp500_tensor, stocks_names
 
     @staticmethod

@@ -3,7 +3,7 @@ from functools import partial
 
 from torch import nn
 
-from Architectures.lstm_autoencoder import ToyAutoEncoder, SP500AutoEncoder
+from Architectures.lstm_autoencoder import ToyAutoEncoder, SP500AutoEncoder, SP500AutoEncoder_prediction
 from Utils.data_utils import DataUtils
 from Utils.parameters_tune import ParameterTuning
 from Utils.training_utils import TrainingUtils
@@ -13,13 +13,13 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 import argparse
-
+import numpy as np
 
 writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_snp500')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('--batch-size', type=int, default=40, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=1000, metavar='N',
+parser.add_argument('--epochs', type=int, default=30, metavar='N',  # 100,150
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -53,29 +53,19 @@ def plot_stock_high_prices(path):
                                        "Daily high")
 
 
-def main():
-    path = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
-    # plot_stock_high_prices(path)
-    data_dir = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
-    # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots")
-    config = {"hidden_size": 256,
-              "lr": 0.001,
-              "grad_clip": None}
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    data_tensor, train_stocks_names = DataUtils.load_snp500(data_dir, args.batch_size)
-    train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.7, 0.3)
+def snp500_reconstruct(data_tensor, config, device, plots_suffix):
+    train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.85, 0.15)
     data_gen = DataUtils.generate_random_split(data_tensor[train_idxs], args.folds, 0.9, 0.1)
     test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), args.batch_size)
     criterion = nn.MSELoss()
     tune = ParameterTuning()
     tune.kfold_run(train_func=partial(TrainingUtils.kfold_train,
-                                      # auto_encoder_init=SP500AutoEncoder,
-                                      auto_encoder_init=ToyAutoEncoder,
+                                      # auto_encoder_init=ToyAutoEncoder,
+                                      auto_encoder_init=SP500AutoEncoder,
                                       lr=config["lr"],
                                       hidden_size=config["hidden_size"],
                                       input_size=1,
-                                      input_seq_size=1007,
+                                      input_seq_size=data_tensor.shape[1],  # 1007
                                       batch_size=args.batch_size,
                                       criterion=criterion,
                                       optimizer=args.optimizer,
@@ -91,21 +81,135 @@ def main():
                                      device=device),
                    data_tensor=data_tensor[train_idxs].unsqueeze(2),
                    data_generator=data_gen,
-                   batch_size=args.batch_size)
+                   batch_size=args.batch_size,
+                   config=config)
 
-    test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), min(len(test_idxs),args.batch_size))
-    VisualizationUtils.compare_reconstruction(device,
-                                              test_loader,
-                                              tune.best_model,
-                                              os.path.join(plots_suffix, "reconstruct_snp500"))
-    # print("Best trial config: {}".format(tune.best_config))
-    # print("Best trial final validation loss: {}".format(round(tune.get_best_val_loss(), 3)))
-    # print("Best trial test set accuracy: {}".format(round(tune.best_loss, 3)))
-    # tune.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
-    # tune.plot_train_trails(path=os.path.join(plots_suffix, "all_train_trails"))
-    # tune.plot_best_train(path=os.path.join(plots_suffix, "best train trail"))
-    # tune.plot_best_val(path=os.path.join(plots_suffix, "best validation trail"))
+    test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2),
+                                               min(len(test_idxs), args.batch_size))
+
+    test_input = next(iter(test_loader))
+    test_input = test_input.to(device)
+    reconstructed = tune.best_model(test_input)
+
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+
+    return test_input, reconstructed
+
+
+def reconstruct():
+    path = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
+    # plot_stock_high_prices(path)
+    data_dir = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
+    plots_suffix = os.path.join("plots", "snp500")
+    config = {"hidden_size": 256,
+              "lr": 0.001,
+              "grad_clip": None}
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    data_tensor, train_stocks_names = DataUtils.load_snp500(data_dir, args.batch_size, 10)
+    test_input, reconstructed = snp500_reconstruct(data_tensor[0], config, device, plots_suffix)
+    test_input = np.squeeze(test_input.cpu().detach().numpy(), 2)
+    reconstructed = np.squeeze(reconstructed.cpu().detach().numpy(), 2)
+    for i in range(len(data_tensor) - 1):
+        sub_test_input, sub_reconstructed = snp500_reconstruct(data_tensor[i + 1], config, device, plots_suffix)
+        sub_test_input = np.squeeze(sub_test_input.cpu().detach().numpy(), 2)
+        sub_reconstructed = np.squeeze(sub_reconstructed.cpu().detach().numpy(), 2)
+        test_input = np.concatenate((test_input, sub_test_input), axis=1)
+        reconstructed = np.concatenate((reconstructed, sub_reconstructed), axis=1)
+
+    VisualizationUtils.plot_reconstruct(reconstructed,
+                                        test_input,
+                                        3,
+                                        os.path.join(plots_suffix, "reconstruct"),
+                                        "Reconstructed vs Original")
+
+
+def snp500_prediction(data_tensor, config, device, plots_suffix):
+    train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.85, 0.15)
+    data_gen = DataUtils.generate_random_split(data_tensor[train_idxs], args.folds, 0.8, 0.2)
+    test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), args.batch_size)
+    criterion = nn.MSELoss()
+    tune = ParameterTuning()
+    tune.kfold_run(train_func=partial(TrainingUtils.kfold_train,
+                                      # auto_encoder_init=ToyAutoEncoder,
+                                      auto_encoder_init=SP500AutoEncoder_prediction,
+                                      lr=config["lr"],
+                                      hidden_size=config["hidden_size"],
+                                      input_size=2,
+                                      input_seq_size=int(data_tensor.shape[1] / 2),  # 1007
+                                      batch_size=args.batch_size,
+                                      criterion=criterion,
+                                      optimizer=args.optimizer,
+                                      lstm_layers_size=args.lstm_layers_size,
+                                      decoder_output_size=args.decoder_output_size,
+                                      epochs=args.epochs,
+                                      training_iteration=TrainingUtils.prediction_training_iteration,
+                                      validation=TrainingUtils.prediction_validation,
+                                      device=device),
+                   test_func=partial(TrainingUtils.prediction_test,
+                                     criterion=criterion,
+                                     test_loader=test_loader,
+                                     device=device),
+                   data_tensor=data_tensor[train_idxs].unsqueeze(2),
+                   data_generator=data_gen,
+                   batch_size=args.batch_size,
+                   config=config)
+
+    test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2),
+                                               min(len(test_idxs), args.batch_size))
+
+    test_input = next(iter(test_loader))
+    test_input = test_input.to(device)
+    b, r, c = test_input.shape
+    test_input = test_input.view(b, int(r / 2), 2)
+    reconstruct, predict = tune.best_model(test_input)
+
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+
+    original_seq_first_day = test_input[:, :, 0].cpu().detach().numpy()
+    original_seq_second_day = test_input[:, :, 1].cpu().detach().numpy()
+    reconstruct = reconstruct.detach().cpu().numpy()
+    predict = predict.detach().cpu().numpy()
+
+    return original_seq_first_day, reconstruct, original_seq_second_day, predict
+
+
+def prediction():
+    data_dir = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
+    plots_suffix = os.path.join("plots", "snp500")
+    config = {"hidden_size": 256,
+              "lr": 0.001,
+              "grad_clip": None}
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    data_tensor, train_stocks_names = DataUtils.load_snp500_double_input(data_dir, args.batch_size, 10)
+    seq_first_day, reconstruct, seq_second_day, predict = snp500_prediction(data_tensor[0],
+                                                                            config,
+                                                                            device,
+                                                                            plots_suffix)
+
+    for i in range(len(data_tensor) - 1):
+        sub_seq_first_day, sub_reconstruct, sub_seq_second_day, sub_predict = snp500_prediction(data_tensor[i + 1],
+                                                                                                config,
+                                                                                                device,
+                                                                                                plots_suffix)
+
+        seq_first_day = np.concatenate((seq_first_day, sub_seq_first_day), axis=1)
+        reconstruct = np.concatenate((reconstruct, sub_reconstruct), axis=1)
+        seq_second_day = np.concatenate((seq_second_day, sub_seq_second_day), axis=1)
+        predict = np.concatenate((predict, sub_predict), axis=1)
+
+    VisualizationUtils.plot_reconstruct(reconstruct,
+                                        seq_first_day,
+                                        3,
+                                        os.path.join(plots_suffix, "Reconstructed"),
+                                        "Reconstructed vs Original")
+
+    VisualizationUtils.plot_reconstruct(predict,
+                                        seq_second_day,
+                                        3,
+                                        os.path.join(plots_suffix, "predict"),
+                                        "Prediction vs Original")
 
 
 if __name__ == "__main__":
-    main()
+    #reconstruct()
+    prediction()
