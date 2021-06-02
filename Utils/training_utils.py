@@ -262,6 +262,8 @@ class TrainingUtils:
         return {str(mse_criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
 
+
+
     @staticmethod
     def prediction_training_iteration(auto_encoder,
                                       mse_criterion,
