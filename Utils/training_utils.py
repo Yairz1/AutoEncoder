@@ -278,7 +278,7 @@ class TrainingUtils:
             data = data.view(b, int(r/2), 2)
             reconstruct, predict = auto_encoder(data)
             loss_rec = mse_criterion(reconstruct, data[:, :, 0])
-            loss_pre = mse_criterion(predict, data[:, :, 0])
+            loss_pre = mse_criterion(predict, data[:, :, 1])
             loss = loss_rec + loss_pre
             loss.backward()
             optimizer.step()
