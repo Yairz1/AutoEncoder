@@ -135,44 +135,15 @@ class DataUtils:
         return indices[:train_size], indices[train_size:]
 
     @staticmethod
-    def load_snp500(path, batch_size, n_groups):
-        sp_500_df = pd.read_csv(path)
+    def load_snp500(path, batch_size):
+        sp_500_df = pd.read_csv(path)  # , nrows=1000)
         sp_500_df = sp_500_df.sort_values(by="date")
         sp_500_df = sp_500_df[["symbol", "close"]]
         sp_500_group = sp_500_df.groupby('symbol')
         stocks_names = list(sp_500_group.groups.keys())
         sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
         sp500_array.interpolate(inplace=True)
-
         sp500_tensor = DataUtils.normalize(torch.FloatTensor(sp500_array.values))
-
-        sp500_tensor = np.array_split(torch.transpose(sp500_tensor, 1, 0), n_groups)
-        sp500_tensor = [torch.transpose(sp500_tensor[i], 1, 0) for i in range(n_groups)]
-
-        return sp500_tensor, stocks_names
-
-    @staticmethod
-    def load_snp500_double_input(path, batch_size, n_groups):
-        sp_500_df = pd.read_csv(path)
-        sp_500_df = sp_500_df.sort_values(by="date")
-        sp_500_df = sp_500_df[["symbol", "close"]]
-        sp_500_group = sp_500_df.groupby('symbol')
-        stocks_names = list(sp_500_group.groups.keys())
-        sp500_array = sp_500_group['close'].apply(lambda x: pd.Series(x.values)).unstack()
-        sp500_array.interpolate(inplace=True)
-
-        first_input = np.array(sp500_array)[:, 0:1006]
-        second_input = np.array(sp500_array)[:, 1:1007]
-
-        double_input = np.concatenate((first_input, second_input), axis=1)
-        double_input = torch.FloatTensor(double_input)
-        double_input = DataUtils.normalize(double_input)
-
-        first_input = np.array_split(double_input[:, 0:1006], n_groups, 1)
-        second_input = np.array_split(double_input[:, 1006:], n_groups, 1)
-
-        sp500_tensor = [torch.cat((first_input[i], second_input[i]), 1) for i in range(n_groups)]
-
         return sp500_tensor, stocks_names
 
     @staticmethod
