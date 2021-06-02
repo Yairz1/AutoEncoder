@@ -73,17 +73,18 @@ class ParameterTuning:
 
             test_info = test_func(auto_encoder)
             test_accuracy = test_info.pop("accuracy", None)
-            test_total_loss = sum(list(test_info.values()))
 
-            if test_total_loss < self._best_loss:
+            val_total_loss = np.sum(np.array(list(val_info_dic.values()))[:, -1])  # sum(list(test_info.values()))
+
+            if val_total_loss < self._best_loss:
                 self._best_config = config
-                self._best_loss = test_total_loss
+                self._best_loss = val_total_loss
                 self._test_loss_list = test_info  # list(test_info.values())
                 self._best_model = auto_encoder
                 if collect_accuracy_info:
                     self._best_accuracy = test_accuracy
 
-    def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size):
+    def kfold_run(self, train_func, test_func, data_tensor, data_generator, batch_size, config):
         """
 
         :param train_func:
@@ -98,11 +99,19 @@ class ParameterTuning:
             train_loader = DataUtils.create_data_loader(data_tensor[tr_ind, :], batch_size)
             val_loader = DataUtils.create_data_loader(data_tensor[val_ind, :], batch_size)
             auto_encoder, train_info, val_info = train_func(train_loader, val_loader)
-            self.fold_train_info.append(train_info)
-            self.fold_val_info.append(val_info)
-            if val_info[-1] < self._best_val_loss:
-                self._best_fold = i
+
+            self.config2train_info[str(config)] = train_info
+            self.config2val_info[str(config)] = val_info
+
+            val_total_loss = np.sum(np.array(list(val_info.values()))[:, -1])  # list(val_info.values())[0][-1]
+
+            test_info = test_func(auto_encoder)
+
+            if val_total_loss < self._best_val_loss:
+                self._best_config = config
                 self._best_model = auto_encoder
+                self._best_val_loss = val_total_loss
+                self._test_loss_list = test_info
 
         self._test_loss = test_func(auto_encoder)
 
@@ -164,13 +173,13 @@ class ParameterTuning:
             if path:
                 fig.savefig(path)
 
-    def plot_all_results(self, plots_suffix, is_accuracy, is_gridsearch):
+    def plot_all_results(self, plots_suffix, is_accuracy, is_gridsearch, n_part=""):
 
         print("Best trial config: {}".format(self.best_config))
         print("Best trial validation loss: {}".format(self.get_best_val_loss()))
         print("Best trial test total loss: {}".format(self.best_loss_list))
-        self.plot_best_loss(self.config2train_info, plots_suffix, "best_train_trail_loss", "Epochs", "Loss")
-        self.plot_best_loss(self.config2val_info, plots_suffix, "best_validation_trail_loss", "Epochs", "Loss")
+        self.plot_best_loss(self.config2train_info, plots_suffix, "best_train_trail_los" + n_part, "Epochs", "Loss")
+        self.plot_best_loss(self.config2val_info, plots_suffix, "best_validation_trail_los" + n_part, "Epochs", "Loss")
 
         if is_gridsearch:
             self.plot_validation_trails(path=os.path.join(plots_suffix, "all_validation_trails"))
