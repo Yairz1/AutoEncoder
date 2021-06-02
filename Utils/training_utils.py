@@ -233,6 +233,7 @@ class TrainingUtils:
 
         return {str(mse_criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
+
     @staticmethod
     def validation(auto_encoder, criterion, device, val_loader):
         val_loss = 0.0
