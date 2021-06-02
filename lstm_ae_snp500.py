@@ -230,6 +230,6 @@ def plot_stocks():
 
 
 if __name__ == "__main__":
-    #plot_stocks()   #3.1
-    #reconstruct()   #3.2
+    plot_stocks()   #3.1
+    reconstruct()   #3.2
     prediction()    #3.3

@@ -56,6 +56,7 @@ def main():
     config = {"hidden_size": [40, 256],
               "lr": [0.01, 0.001],
               "grad_clip": [1, None]}
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     test_loader, _, _ = DataUtils.load_synthetic_data(data_dir, args.batch_size, args.load)
     criterion = nn.MSELoss()
