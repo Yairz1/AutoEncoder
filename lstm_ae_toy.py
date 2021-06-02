@@ -18,7 +18,7 @@ writer = SummaryWriter()
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=5, metavar='N',
+parser.add_argument('--epochs', type=int, default=350, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -51,8 +51,8 @@ def plot_synthetic_samples(path, data_dir):
 def main():
     data_dir = os.path.join("data", "synthetic_data")
     # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots")
-    plot_synthetic_samples(os.path.join(plots_suffix, "synthetic_data_examples"), data_dir)
+    plots_suffix = os.path.join("plots", "toy")
+    plot_synthetic_samples(os.path.join(plots_suffix, "part_I", "synthetic_data_examples"), data_dir)
     config = {"hidden_size": [40, 256],
               "lr": [0.01, 0.001],
               "grad_clip": [1, None]}
@@ -84,10 +84,11 @@ def main():
     VisualizationUtils.compare_reconstruction(device,
                                               test_loader,
                                               tune.best_model,
-                                              os.path.join(plots_suffix, "reconstruct"),
-                                              "Reconstructed vs Original")
+                                              os.path.join(plots_suffix, "part_II", "reconstruct"),
+                                              "Reconstructed vs Original",
+                                              ["Origin", "Reconstructed"])
 
-    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=True)
+    tune.plot_all_results(os.path.join(plots_suffix, "part_II"), is_accuracy=False, is_gridsearch=True)
 
 
 if __name__ == "__main__":

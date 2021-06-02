@@ -37,23 +37,25 @@ args = parser.parse_args()
 print(torch.cuda.get_device_name(0))
 
 
-def plot_stock_high_prices(path):
+def plot_stock_high_prices(path, plots_suffix):
     amazon_daily_max, googl_daily_max = DataUtils.load_snp500_amzn_google_daily_max(path)
     VisualizationUtils.plot_df_columns(amazon_daily_max,
                                        "date",
                                        "high",
                                        "Amazon \nTime vs Daily Maximum",
                                        "Time",
-                                       "Daily high")
+                                       "Daily high",
+                                       os.path.join(plots_suffix, "amazon"))
     VisualizationUtils.plot_df_columns(googl_daily_max,
                                        "date",
                                        "high",
                                        "Google \nTime vs Daily Maximum",
                                        "Time",
-                                       "Daily high")
+                                       "Daily high",
+                                       os.path.join(plots_suffix, "google"))
 
 
-def snp500_reconstruct(data_tensor, config, device, plots_suffix):
+def snp500_reconstruct(data_tensor, config, device, plots_suffix, n_part):
     train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.85, 0.15)
     data_gen = DataUtils.generate_random_split(data_tensor[train_idxs], args.folds, 0.9, 0.1)
     test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), args.batch_size)
@@ -91,7 +93,7 @@ def snp500_reconstruct(data_tensor, config, device, plots_suffix):
     test_input = test_input.to(device)
     reconstructed = tune.best_model(test_input)
 
-    #tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False, n_part=n_part)
 
     test_input = np.squeeze(test_input.cpu().detach().numpy(), 2)
     reconstructed = np.squeeze(reconstructed.cpu().detach().numpy(), 2)
@@ -100,18 +102,25 @@ def snp500_reconstruct(data_tensor, config, device, plots_suffix):
 
 
 def reconstruct():
-    path = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
-    # plot_stock_high_prices(path)
     data_dir = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
-    plots_suffix = os.path.join("plots", "snp500")
+    plots_suffix = os.path.join("plots", "snp500", "part_II")
     config = {"hidden_size": 256,
               "lr": 0.001,
               "grad_clip": None}
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     data_tensor, train_stocks_names = DataUtils.load_snp500(data_dir, args.batch_size, 10)
-    test_input, reconstructed = snp500_reconstruct(data_tensor[0], config, device, plots_suffix)
+    test_input, reconstructed = snp500_reconstruct(data_tensor[0],
+                                                   config,
+                                                   device,
+                                                   plots_suffix,
+                                                   "_part"+str(0)+"_")
     for i in range(len(data_tensor) - 1):
-        sub_test_input, sub_reconstructed = snp500_reconstruct(data_tensor[i + 1], config, device, plots_suffix)
+        sub_test_input, sub_reconstructed = snp500_reconstruct(data_tensor[i + 1],
+                                                               config,
+                                                               device,
+                                                               plots_suffix,
+                                                               "_part"+str(i + 1)+"_")
+
         test_input = np.concatenate((test_input, sub_test_input), axis=1)
         reconstructed = np.concatenate((reconstructed, sub_reconstructed), axis=1)
 
@@ -123,7 +132,7 @@ def reconstruct():
                                         ["Origin", "Reconstructed"])
 
 
-def snp500_prediction(data_tensor, config, device, plots_suffix):
+def snp500_prediction(data_tensor, config, device, plots_suffix, n_part):
     train_idxs, test_idxs = DataUtils.create_random_train_test_indices_split(data_tensor.shape[0], 0.85, 0.15)
     data_gen = DataUtils.generate_random_split(data_tensor[train_idxs], args.folds, 0.8, 0.2)
     test_loader = DataUtils.create_data_loader(data_tensor[test_idxs].unsqueeze(2), args.batch_size)
@@ -163,7 +172,7 @@ def snp500_prediction(data_tensor, config, device, plots_suffix):
     test_input = test_input.view(b, int(r / 2), 2)
     reconstruct, predict = tune.best_model(test_input)
 
-    #tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False, n_part=n_part)
 
     original_seq_first_day = test_input[:, :, 0].cpu().detach().numpy()
     original_seq_second_day = test_input[:, :, 1].cpu().detach().numpy()
@@ -175,7 +184,7 @@ def snp500_prediction(data_tensor, config, device, plots_suffix):
 
 def prediction():
     data_dir = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
-    plots_suffix = os.path.join("plots", "snp500")
+    plots_suffix = os.path.join("plots", "snp500", "part_III")
     config = {"hidden_size": 256,
               "lr": 0.001,
               "grad_clip": None}
@@ -184,13 +193,15 @@ def prediction():
     seq_first_day, reconstruct, seq_second_day, predict = snp500_prediction(data_tensor[0],
                                                                             config,
                                                                             device,
-                                                                            plots_suffix)
+                                                                            plots_suffix,
+                                                                            "_part"+str(0)+"_")
 
     for i in range(len(data_tensor) - 1):
         sub_seq_first_day, sub_reconstruct, sub_seq_second_day, sub_predict = snp500_prediction(data_tensor[i + 1],
                                                                                                 config,
                                                                                                 device,
-                                                                                                plots_suffix)
+                                                                                                plots_suffix,
+                                                                                                "_part"+str(i + 1)+"_")
 
         seq_first_day = np.concatenate((seq_first_day, sub_seq_first_day), axis=1)
         reconstruct = np.concatenate((reconstruct, sub_reconstruct), axis=1)
@@ -212,6 +223,13 @@ def prediction():
                                         ["Origin", "Prediction"])
 
 
+def plot_stocks():
+    path = os.path.join("data", "SP 500 Stock Prices 2014-2017.csv")
+    plots_suffix = os.path.join("plots", "snp500", "part_I")
+    plot_stock_high_prices(path, plots_suffix)
+
+
 if __name__ == "__main__":
-    #reconstruct()
-    prediction()
+    plot_stocks()   #3.1
+    reconstruct()   #3.2
+    prediction()    #3.3
