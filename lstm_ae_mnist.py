@@ -13,7 +13,7 @@ import argparse
 parser = argparse.ArgumentParser(description='lstm_ae_toy')
 parser.add_argument('--batch-size', type=int, default=200, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=3, metavar='N',  # 50
+parser.add_argument('--epochs', type=int, default=50, metavar='N',  # 50
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--lstm-layers-size', type=int, default=3, metavar='N',
                     help='lstm layers number, default 3')
@@ -59,7 +59,7 @@ def compare_mnist_reconstruction_classification(device, test_loader, model, path
 def mnist_reconstructing():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots", "mnist")
+    plots_suffix = os.path.join("plots", "mnist", "part_I")
     data_dir = os.path.join("data")  # 196
     config = {"hidden_size": [196],
               "lr": [0.001],
@@ -102,7 +102,7 @@ def mnist_reconstructing():
 def mnist_classifying():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # plots_suffix = os.path.join("plots", "job_plots")
-    plots_suffix = os.path.join("plots", "mnist")
+    plots_suffix = os.path.join("plots", "mnist", "part_II")
     data_dir = os.path.join("data")  # 196
     config = {"hidden_size": [196],
               "lr": [0.001],

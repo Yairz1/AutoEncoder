@@ -41,9 +41,11 @@ class VisualizationUtils:
                                       title: str,
                                       xlabel: str,
                                       ylabel: str,
+                                      labels: list,
                                       path: str):
         """
 
+        :param labels:
         :param reconstruction:
         :param data:
         :param n:
@@ -61,8 +63,8 @@ class VisualizationUtils:
             ax.set_title(f"Sample {i}")
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-        handles, labels = axs[-1].get_legend_handles_labels()
-        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        handles, _ = axs[-1].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper left')
         fig.tight_layout(pad=3.0)
         fig.suptitle(title)
         plt.show()
@@ -93,7 +95,12 @@ class VisualizationUtils:
         ax.set_ylabel(ylabel)   #"Loss
 
     @staticmethod
-    def plot_reconstruct(reconstruction: torch.tensor, test_input: torch.tensor, n: int, path: str):
+    def plot_reconstruct(reconstruction: torch.tensor,
+                         test_input: torch.tensor,
+                         n: int,
+                         path: str,
+                         title: str,
+                         labels: list):
         """
 
         :param reconstruction:
@@ -105,9 +112,10 @@ class VisualizationUtils:
         VisualizationUtils.visualize_data_reconstruction(reconstruction=reconstruction,
                                                          data=test_input,
                                                          n=n,
-                                                         title="Reconstructed vs Original",
+                                                         title=title,
                                                          xlabel="Time",
                                                          ylabel="Value",
+                                                         labels=labels,
                                                          path=path)
 
     @staticmethod
@@ -185,14 +193,15 @@ class VisualizationUtils:
             fig.savefig(path)
 
     @staticmethod
-    def plot_df_columns(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str, ylabel: str):
-        df.plot(x=x_col, y=y_col, title=title, xlabel=xlabel, ylabel=ylabel)
+    def plot_df_columns(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str, ylabel: str, plots_suffix):
+        fig = df.plot(x=x_col, y=y_col, title=title, xlabel=xlabel, ylabel=ylabel)
         plt.show()
+        fig.get_figure().savefig(plots_suffix+".png")
 
     @staticmethod
-    def compare_reconstruction(device, test_loader, model, path):
+    def compare_reconstruction(device, test_loader, model, path, title, labels):
         with torch.no_grad():
             test_input = next(iter(test_loader))
             test_input = test_input.to(device)
             reconstructed = model(test_input)
-            VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path)
+            VisualizationUtils.plot_reconstruct(reconstructed.cpu(), test_input.cpu(), 3, path, title, labels)
