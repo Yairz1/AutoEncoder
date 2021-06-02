@@ -56,6 +56,34 @@ class TrainingUtils:
         return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
 
     @staticmethod
+    def prediction_test(net, criterion, test_loader, device):
+        running_loss_reconstruct = 0.0
+        running_loss_prediction = 0.0
+        loss = 0
+        steps = 0
+
+        with torch.no_grad():
+            for data in test_loader:
+                data = data.to(device)
+                b, r, c = data.shape
+                data = data.view(b, int(r / 2), 2)
+                reconstruct, predict = net(data)
+                loss_rec = criterion(reconstruct, data[:, :, 0]).item()
+                loss_pre = criterion(predict, data[:, :, 1]).item()
+
+                loss += loss_rec + loss_pre
+                running_loss_reconstruct += loss_rec
+                running_loss_prediction += loss_pre
+                steps += 1
+
+        print(f"Test loss = {loss / steps}")
+
+        loss_reconstruct_avg = running_loss_reconstruct / steps
+        loss_prediction_avg = running_loss_prediction / steps
+
+        return {"mse_reconstruct": loss_reconstruct_avg, "mse_prediction": loss_prediction_avg}
+
+    @staticmethod
     def init(auto_encoder_init,
              input_size,
              input_seq_size,
@@ -85,7 +113,6 @@ class TrainingUtils:
             auto_encoder = auto_encoder.to(device)
             optimizer.load_state_dict(optimizer_state)
         return auto_encoder, optimizer
-
 
     @staticmethod
     def train(config,
@@ -119,6 +146,7 @@ class TrainingUtils:
                                                      device)
         auto_encoder.to(device)
         test_loader, train_loader, val_loader = DataUtils.data_factory(dataset_name, data_dir, batch_size, load_data)
+
         train_info_dic = defaultdict(list)
         val_info_dic = defaultdict(list)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
@@ -164,19 +192,19 @@ class TrainingUtils:
                                                      decoder_output_size,
                                                      device)
         auto_encoder.to(device)
-        training_info = []
-        val_info = []
-        # train_loader = DataUtils.create_data_loader(data_tensor[tr_ind, :], batch_size)
-        # val_loader = DataUtils.create_data_loader(data_tensor[val_ind, :], batch_size)
+        train_info_dic = defaultdict(list)
+        val_info_dic = defaultdict(list)
         for _ in tqdm(range(epochs), desc="Training progress"):  # epochs loop
-            average_loss = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)
-            training_info.append(average_loss)
-            # Validation loss
-            validation_average_loss = validation(auto_encoder, criterion, device, val_loader)
-            val_info.append(validation_average_loss)
+            train_info = training_iteration(auto_encoder, criterion, device, optimizer, train_loader)
+            val_info = validation(auto_encoder, criterion, device, val_loader)
+
+            for key, value in train_info.items():
+                train_info_dic[key].append(value)
+            for key, value in val_info.items():
+                val_info_dic[key].append(value)
 
         print("Finished Training")
-        return auto_encoder, training_info, val_info
+        return auto_encoder, train_info_dic, val_info_dic
 
     @staticmethod
     def training_iteration(auto_encoder, mse_criterion, device, optimizer, train_loader):
@@ -235,6 +263,37 @@ class TrainingUtils:
 
 
     @staticmethod
+    def prediction_training_iteration(auto_encoder,
+                                      mse_criterion,
+                                      device,
+                                      optimizer,
+                                      train_loader):
+        running_loss_reconstruct = 0.0
+        running_loss_prediction = 0.0
+        epoch_steps = 0
+
+        for i, data in enumerate(train_loader, 0):
+            data = data.to(device)
+            optimizer.zero_grad()
+            b, r, c = data.shape
+            data = data.view(b, int(r/2), 2)
+            reconstruct, predict = auto_encoder(data)
+            loss_rec = mse_criterion(reconstruct, data[:, :, 0])
+            loss_pre = mse_criterion(predict, data[:, :, 1])
+            loss = loss_rec + loss_pre
+            loss.backward()
+            optimizer.step()
+            # statistics
+            running_loss_reconstruct += loss_rec.item()
+            running_loss_prediction += loss_pre.item()
+            epoch_steps += 1
+
+        loss_reconstruct_avg = running_loss_reconstruct / epoch_steps
+        loss_prediction_avg = running_loss_prediction / epoch_steps
+
+        return {"mse_reconstruct": loss_reconstruct_avg, "mse_prediction": loss_prediction_avg}
+
+    @staticmethod
     def validation(auto_encoder, criterion, device, val_loader):
         val_loss = 0.0
         val_steps = 1
@@ -275,3 +334,26 @@ class TrainingUtils:
         accuracy = 100 * correct / total
 
         return {str(criterion): loss_mse_avg, str(ce_criterion): loss_ce_avg, "accuracy": accuracy}
+
+    @staticmethod
+    def prediction_validation(auto_encoder, criterion, device, val_loader):
+        val_steps = 0
+        running_loss_reconstruct = 0.0
+        running_loss_prediction = 0.0
+
+        for i, data in enumerate(val_loader, 0):
+            with torch.no_grad():
+                data = data.to(device)
+                b, r, c = data.shape
+                data = data.view(b, int(r / 2), 2)
+                reconstruct, predict = auto_encoder(data)
+                loss_rec = criterion(reconstruct, data[:, :, 0])
+                loss_pre = criterion(predict, data[:, :, 1])
+                running_loss_reconstruct += loss_rec.cpu().numpy()
+                running_loss_prediction += loss_pre.cpu().numpy()
+                val_steps += 1
+
+        loss_reconstruct_avg = running_loss_reconstruct / val_steps
+        loss_prediction_avg = running_loss_prediction / val_steps
+
+        return {"mse_reconstruct": loss_reconstruct_avg, "mse_prediction": loss_prediction_avg}
