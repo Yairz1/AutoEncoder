@@ -91,7 +91,10 @@ def snp500_reconstruct(data_tensor, config, device, plots_suffix):
     test_input = test_input.to(device)
     reconstructed = tune.best_model(test_input)
 
-    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+    #tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+
+    test_input = np.squeeze(test_input.cpu().detach().numpy(), 2)
+    reconstructed = np.squeeze(reconstructed.cpu().detach().numpy(), 2)
 
     return test_input, reconstructed
 
@@ -107,12 +110,8 @@ def reconstruct():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     data_tensor, train_stocks_names = DataUtils.load_snp500(data_dir, args.batch_size, 10)
     test_input, reconstructed = snp500_reconstruct(data_tensor[0], config, device, plots_suffix)
-    test_input = np.squeeze(test_input.cpu().detach().numpy(), 2)
-    reconstructed = np.squeeze(reconstructed.cpu().detach().numpy(), 2)
     for i in range(len(data_tensor) - 1):
         sub_test_input, sub_reconstructed = snp500_reconstruct(data_tensor[i + 1], config, device, plots_suffix)
-        sub_test_input = np.squeeze(sub_test_input.cpu().detach().numpy(), 2)
-        sub_reconstructed = np.squeeze(sub_reconstructed.cpu().detach().numpy(), 2)
         test_input = np.concatenate((test_input, sub_test_input), axis=1)
         reconstructed = np.concatenate((reconstructed, sub_reconstructed), axis=1)
 
@@ -120,7 +119,8 @@ def reconstruct():
                                         test_input,
                                         3,
                                         os.path.join(plots_suffix, "reconstruct"),
-                                        "Reconstructed vs Original")
+                                        "Reconstructed vs Original",
+                                        ["Origin", "Reconstructed"])
 
 
 def snp500_prediction(data_tensor, config, device, plots_suffix):
@@ -163,7 +163,7 @@ def snp500_prediction(data_tensor, config, device, plots_suffix):
     test_input = test_input.view(b, int(r / 2), 2)
     reconstruct, predict = tune.best_model(test_input)
 
-    tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
+    #tune.plot_all_results(plots_suffix, is_accuracy=False, is_gridsearch=False)
 
     original_seq_first_day = test_input[:, :, 0].cpu().detach().numpy()
     original_seq_second_day = test_input[:, :, 1].cpu().detach().numpy()
@@ -201,13 +201,15 @@ def prediction():
                                         seq_first_day,
                                         3,
                                         os.path.join(plots_suffix, "Reconstructed"),
-                                        "Reconstructed vs Original")
+                                        "Reconstructed vs Original",
+                                        ["Origin", "Reconstructed"])
 
     VisualizationUtils.plot_reconstruct(predict,
                                         seq_second_day,
                                         3,
                                         os.path.join(plots_suffix, "predict"),
-                                        "Prediction vs Original")
+                                        "Prediction vs Original",
+                                        ["Origin", "Prediction"])
 
 
 if __name__ == "__main__":

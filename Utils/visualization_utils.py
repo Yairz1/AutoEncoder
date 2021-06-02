@@ -41,9 +41,11 @@ class VisualizationUtils:
                                       title: str,
                                       xlabel: str,
                                       ylabel: str,
+                                      labels: list,
                                       path: str):
         """
 
+        :param labels:
         :param reconstruction:
         :param data:
         :param n:
@@ -61,8 +63,8 @@ class VisualizationUtils:
             ax.set_title(f"Sample {i}")
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-        handles, labels = axs[-1].get_legend_handles_labels()
-        fig.legend(handles, ["Origin", "Reconstructed"], loc='upper left')
+        handles, _ = axs[-1].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper left')
         fig.tight_layout(pad=3.0)
         fig.suptitle(title)
         plt.show()
@@ -97,7 +99,8 @@ class VisualizationUtils:
                          test_input: torch.tensor,
                          n: int,
                          path: str,
-                         title: str):
+                         title: str,
+                         labels: list):
         """
 
         :param reconstruction:
@@ -112,6 +115,7 @@ class VisualizationUtils:
                                                          title=title,
                                                          xlabel="Time",
                                                          ylabel="Value",
+                                                         labels=labels,
                                                          path=path)
 
     @staticmethod
