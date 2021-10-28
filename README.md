@@ -1,4 +1,4 @@
-#Experiments
+# Results
 ## Synthetic data reconstruction
 
 ![synthetic_recon](https://user-images.githubusercontent.com/17856801/139246881-9e18f066-fa2a-46db-9abb-fa879fb96767.png)
